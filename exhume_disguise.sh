@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================
-#   MODULE: EXHUME DISGUISE (v10.1 Final Scanner)
+#   MODULE: EXHUME DISGUISE (v11.0 Perfect Table)
 # ============================================
 
 if [ -f "./bxp_libcore.sh" ]; then source ./bxp_libcore.sh; fi
@@ -80,26 +80,31 @@ while true; do
                 if ! command -v jq >/dev/null 2>&1; then pkg install jq -y >/dev/null 2>&1; fi
                 
                 echo -e "${G}[*] Scanning Wi-Fi sekitar (Real-time)...${N}"
-                echo -e "\033[1;36mBSSID                  | SIG  | SSID\033[0m"
-                echo -e "\033[1;36m-------------------------------------------------\033[0m"
+                echo -e "\033[1;36mBSSID                  | CH | SEC       | SIG  | SSID\033[0m"
+                echo -e "\033[1;36m--------------------------------------------------------------------\033[0m"
                 
-                # PARSING LEBIH KUAT (Nangkep SSID, BSSID, RSSI)
-                termux-wifi-scaninfo | jq -r '.[] | "\(.BSSID // .bssid // "N/A") | \(.RSSI // .rssi // "N/A") | \(.SSID // .ssid // "(Hidden)")"' 2>/dev/null || termux-wifi-scaninfo
-                
-                # Pesan tambahan kalau kosong
-                if [ -z "$(termux-wifi-scaninfo | jq -r '.[].BSSID' 2>/dev/null)" ]; then
-                    echo -e "\n\033[0;33m[!] Data kosong. Pastikan GPS nyala & Izin Lokasi Termux:API aktif.\033[0m"
-                fi
+                # Parsing Termux: Konversi Freq ke CH, rapihin Security
+                termux-wifi-scaninfo | jq -r '.[] | 
+                    (.frequency // .freq // 0) as $freq |
+                    (if $freq < 3000 then 1 + (($freq - 2412) / 5 | floor) else 32 + (($freq - 5170) / 5 | floor) end) as $ch |
+                    (.capabilities // .caps // "OPEN") as $caps |
+                    (if $caps | contains("WPA3") then "WPA3" elif $caps | contains("WPA2") then "WPA2" elif $caps | contains("WPA") then "WPA" else "OPEN" end) as $sec |
+                    "\(.BSSID // .bssid // "N/A") | \($ch) | \($sec) | \(.RSSI // .rssi // "N/A") | \(.SSID // .ssid // "(Hidden)")"' 2>/dev/null || echo -e "\033[0;33m[!] Gagal parsing data.\033[0m"
             else
                 if command -v nmcli >/dev/null 2>&1; then
-                    echo -e "\033[1;36mBSSID                  | CH | SEC    | SIG  | SSID\033[0m"
-                    echo -e "\033[1;36m--------------------------------------------------------------\033[0m"
+                    echo -e "\033[1;36mBSSID                  | CH | SEC       | SIG  | SSID\033[0m"
+                    echo -e "\033[1;36m--------------------------------------------------------------------\033[0m"
+                    
+                    # Parsing PC: Gabung Security (WPA1/WPA2), dan rapihin spasi pake printf
                     nmcli -f BSSID,SSID,CHAN,SECURITY,SIGNAL dev wifi list | awk 'NR>1 {
                         bssid=$1; signal=$NF; security=$(NF-1); chan=$(NF-2);
                         ssid=""; for(i=2; i<=NF-3; i++) ssid=ssid" "$i;
                         gsub(/^ +| +$/, "", ssid);
-                        if (ssid=="") ssid="(Hidden)"; if (security=="") security="OPEN";
-                        printf "%-22s | %-2s | %-6s | %-4s | %s\n", bssid, chan, security, signal, ssid
+                        if (ssid=="") ssid="(Hidden)"; 
+                        if (security=="") security="OPEN";
+                        # Gabungin WPA1 dan WPA2 jadi WPA1/WPA2
+                        gsub(/WPA1 WPA2/, "WPA1/WPA2", security);
+                        printf "%-22s | %-2s | %-9s | %-4s | %s\n", bssid, chan, security, signal, ssid
                     }'
                 else
                     echo -e "\033[0;31m[!] 'nmcli' tidak ditemukan.\033[0m"
