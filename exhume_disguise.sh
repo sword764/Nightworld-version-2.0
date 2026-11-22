@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================
-#   MODULE: EXHUME DISGUISE (v5.0 Anti-Freeze)
+#   MODULE: EXHUME DISGUISE (v6.0 Aggressive Sniffer)
 # ============================================
 
 if [ -f "./bxp_libcore.sh" ]; then source ./bxp_libcore.sh; fi
@@ -29,19 +29,17 @@ detect_env() {
     fi
 }
 
-# --- FUNGSI CLEANUP (PAKE PKILL -9 BIAR MATI TOTAL) ---
 cleanup() {
     echo -e "\n\033[0;33m[*] Memaksa proses berhenti & mengembalikan mode normal...\033[0m"
-    pkill -9 -f "airodump-ng" 2>/dev/null
     pkill -9 -f "tcpdump" 2>/dev/null
-    pkill -9 -f "aireplay-ng" 2>/dev/null
-    pkill -9 -f "wpa_supplicant" 2>/dev/null
+    pkill -9 -f "airodump-ng" 2>/dev/null
     if [ -n "$MON_IFACE" ]; then
         ip link set "$MON_IFACE" down 2>/dev/null
         iw dev "$MON_IFACE" set type managed 2>/dev/null
         ip link set "$MON_IFACE" up 2>/dev/null
     fi
     systemctl restart NetworkManager 2>/dev/null
+    nmcli radio wifi on 2>/dev/null
     svc wifi enable 2>/dev/null
     sleep 1
 }
@@ -94,18 +92,21 @@ while true; do
             IFACE=$(iw dev 2>/dev/null | awk '/Interface/{print $2}' | head -n 1)
             MON_IFACE="$IFACE"
             
+            # Matikan NetworkManager Paksa
+            systemctl stop NetworkManager 2>/dev/null
+            nmcli radio wifi off 2>/dev/null
             airmon-ng check kill >/dev/null 2>&1
+            
             ip link set "$IFACE" down 2>/dev/null
             iw dev "$IFACE" set type monitor 2>/dev/null
             ip link set "$IFACE" up 2>/dev/null
             
             echo -e "${G}[*] Scanning Wi-Fi di background...${N}"
-            # Jalanin di background, simpen PID
             airodump-ng "$MON_IFACE" --band abg --output-format csv -w /tmp/nw_hidden_scan > /dev/null 2>&1 &
             AIRODUMP_PID=$!
             
-            echo -e "\033[1;33m[*] Scanning berjalan. Tekan [ENTER] untuk STOP & melihat hasil...\033[0m"
-            read -r # Nunggu user pencet Enter
+            echo -e "\033[1;33m[*] Scanning berjalan. Tekan [ENTER] untuk STOP...\033[0m"
+            read -r
             
             echo -e "\n${Y}[*] Menghentikan scan...${N}"
             kill -9 $AIRODUMP_PID 2>/dev/null
@@ -124,24 +125,30 @@ while true; do
             IFACE=$(iw dev 2>/dev/null | awk '/Interface/{print $2}' | head -n 1)
             MON_IFACE="$IFACE"
             
+            # Matikan NetworkManager Paksa
+            systemctl stop NetworkManager 2>/dev/null
+            nmcli radio wifi off 2>/dev/null
             airmon-ng check kill >/dev/null 2>&1
+            
             ip link set "$IFACE" down 2>/dev/null
             iw dev "$IFACE" set type monitor 2>/dev/null
             ip link set "$IFACE" up 2>/dev/null
             
-            echo -e "${G}[*] Menangkap paket di background...${N}"
-            tcpdump -i "$MON_IFACE" -e -s 256 type mgt subtype probe-req > /tmp/probe_capture.txt 2>&1 &
+            echo -e "${G}[*] Menangkap paket di background (TANPA FILTER)...${N}"
+            # Buang filter, tcpdump semua paket
+            tcpdump -i "$MON_IFACE" -e -s 256 > /tmp/probe_capture.txt 2>&1 &
             TCPDUMP_PID=$!
             
-            echo -e "\033[1;33m[*] Menangkap probe. Tekan [ENTER] untuk STOP...\033[0m"
+            echo -e "\033[1;33m[*] Menangkap paket. Tekan [ENTER] untuk STOP...\033[0m"
             read -r
             
             echo -e "\n${Y}[*] Menghentikan capture...${N}"
             kill -9 $TCPDUMP_PID 2>/dev/null
             wait $TCPDUMP_PID 2>/dev/null
             
-            echo -e "\n${G}[+] Hasil Probe Request (Disimpan di /tmp/probe_capture.txt):${N}"
-            cat /tmp/probe_capture.txt | head -n 20
+            echo -e "\n${G}[+] Hasil (Menyaring Probe Request & Beacon):${N}"
+            # Filter manual pake grep
+            grep -iE "Probe Request|Beacon" /tmp/probe_capture.txt | head -n 20
             
             cleanup
             read -p "Press Enter to continue..."
