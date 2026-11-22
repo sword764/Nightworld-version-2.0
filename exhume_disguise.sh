@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================
-#   MODULE: EXHUME DISGUISE (v4.0 Anti-Hang)
+#   MODULE: EXHUME DISGUISE (v4.1 Anti-Bug pkill)
 # ============================================
 
 if [ -f "./bxp_libcore.sh" ]; then source ./bxp_libcore.sh; fi
@@ -29,14 +29,15 @@ detect_env() {
     fi
 }
 
-# --- FUNGSI CLEANUP (Anti-Hang) ---
+# --- FUNGSI CLEANUP (PAKE PKILL -9 BIAR MATI TOTAL) ---
 cleanup() {
-    echo -e "\n\033[0;33m[*] Menghentikan proses & mengembalikan mode normal...\033[0m"
-    # Bunuh proses yang nyangkut
-    killall airodump-ng 2>/dev/null
-    killall tcpdump 2>/dev/null
-    killall aireplay-ng 2>/dev/null
-    killall wpa_supplicant 2>/dev/null
+    echo -e "\n\033[0;33m[*] Memaksa proses berhenti & mengembalikan mode normal...\033[0m"
+    
+    # Paksa mati semua proses yang nyangkut pake pkill -9
+    pkill -9 -f "airodump-ng" 2>/dev/null
+    pkill -9 -f "tcpdump" 2>/dev/null
+    pkill -9 -f "aireplay-ng" 2>/dev/null
+    pkill -9 -f "wpa_supplicant" 2>/dev/null
     
     # Balikin mode Wi-Fi
     if [ -n "$MON_IFACE" ]; then
@@ -44,12 +45,14 @@ cleanup() {
         iw dev "$MON_IFACE" set type managed 2>/dev/null
         ip link set "$MON_IFACE" up 2>/dev/null
     fi
+    
+    # Restart NetworkManager (Biar Internet Nyala Lagi)
     systemctl restart NetworkManager 2>/dev/null
     svc wifi enable 2>/dev/null
 }
 
 # Trap CTRL+C biar ngejalanin cleanup
-trap cleanup SIGINT
+trap cleanup SIGINT SIGTERM
 
 while true; do
     show_ascii
@@ -103,8 +106,8 @@ while true; do
             ip link set "$IFACE" up 2>/dev/null
             
             echo -e "${G}[*] Scanning Wi-Fi (Tekan CTRL+C untuk stop)...${N}"
-            # Pake timeout, tapi kalo di CTRL+C, trap bakal matiin ini
-            timeout --signal=INT 30 airodump-ng "$MON_IFACE" --band abg --output-format csv -w /tmp/nw_hidden_scan
+            # Pake timeout, tapi kalo di CTRL+C, trap bakal ngejalanin pkill -9
+            timeout 30 airodump-ng "$MON_IFACE" --band abg --output-format csv -w /tmp/nw_hidden_scan
             
             echo -e "\n${G}[+] Scan Selesai/Dibatalkan. Mengekstrak Hidden SSID...${N}"
             awk -F',' '/^([0-9A-F]{2}:){5}[0-9A-F]{2}/ {print "BSSID: "$1" | CH: "$4" | ESSID: "$14}' /tmp/nw_hidden_scan-01.csv 2>/dev/null | grep -iE "hidden|length|" | head -n 10
@@ -125,7 +128,7 @@ while true; do
             ip link set "$IFACE" up 2>/dev/null
             
             echo -e "${G}[*] Menangkap paket (Tekan CTRL+C untuk stop)...${N}"
-            timeout --signal=INT 20 tcpdump -i "$MON_IFACE" -e -s 256 type mgt subtype probe-req
+            timeout 20 tcpdump -i "$MON_IFACE" -e -s 256 type mgt subtype probe-req
             
             cleanup
             read -p "Press Enter to continue..."
