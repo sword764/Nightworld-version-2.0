@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================
-#   MODULE: EXHUME DISGUISE (v9.0 Scanner Lengkap)
+#   MODULE: EXHUME DISGUISE (v9.1 Scanner Rapi)
 # ============================================
 
 if [ -f "./bxp_libcore.sh" ]; then source ./bxp_libcore.sh; fi
@@ -33,7 +33,6 @@ pilih_interface() {
     echo -e "\n${C}=== DAFTAR INTERFACE WIFI ===${N}"
     local IFACES=($(iw dev 2>/dev/null | awk '/Interface/{print $2}'))
     if [ ${#IFACES[@]} -eq 0 ]; then echo -e "\033[0;31m[!] Tidak ada interface.\033[0m"; return 1; fi
-
     for i in "${!IFACES[@]}"; do
         local SUPPORT=$(iw phy $(iw dev ${IFACES[$i]} info 2>/dev/null | grep wiphy | awk '{print $2}') info 2>/dev/null | grep -q "monitor" && echo "[Support Monitor]" || echo "[No Monitor]")
         echo -e "  \033[1;32m[$((i+1))]\033[0m ${IFACES[$i]} \033[1;33m$SUPPORT\033[0m"
@@ -61,7 +60,6 @@ cleanup() {
     echo -e "\n\033[0;33m[*] Memaksa proses berhenti & mengembalikan mode normal...\033[0m"
     pkill -9 -f "tcpdump" 2>/dev/null
     pkill -9 -f "airodump-ng" 2>/dev/null
-    pkill -9 -f "aireplay-ng" 2>/dev/null
     if [ -n "$MON_IFACE" ]; then airmon-ng stop "$MON_IFACE" >/dev/null 2>&1; fi
     if [ -n "$IFACE" ]; then airmon-ng stop "$IFACE" >/dev/null 2>&1; fi
     systemctl restart NetworkManager 2>/dev/null
@@ -105,22 +103,19 @@ while true; do
                     echo -e "\033[0;31m[!] ERROR: termux-api tidak ditemukan.\033[0m"; read -p "Press Enter..."; continue
                 fi
                 if ! command -v jq >/dev/null 2>&1; then pkg install jq -y >/dev/null 2>&1; fi
-                
-                # Tampilan Termux (BSSID, SSID, Channel, Security, Signal)
-                echo -e "\033[1;36mBSSID                 | CH | SEC    | SIG  | SSID\033[0m"
-                echo -e "\033[1;36m-----------------------------------------------------------\033[0m"
+                echo -e "\033[1;36mBSSID                  | CH | SEC    | SIG  | SSID\033[0m"
+                echo -e "\033[1;36m--------------------------------------------------------------\033[0m"
                 termux-wifi-scaninfo | jq -r '.[] | "\(.BSSID // .bssid // "N/A") | \(.frequency // .freq // 0 | if . < 3000 then 1 + (. - 2412) / 5 else 32 + (. - 5170) / 5 end | floor) | \(.capabilities // .caps // "N/A" | if contains("WPA3") then "WPA3" elif contains("WPA2") then "WPA2" elif contains("WPA") then "WPA" else "OPEN" end) | \(.RSSI // .rssi // "N/A") | \(.SSID // .ssid // "Hidden")"' 2>/dev/null || termux-wifi-scaninfo
             else
-                # Tampilan PC (BlackArch / Kali) Pake nmcli
                 if command -v nmcli >/dev/null 2>&1; then
-                    echo -e "\033[1;36mBSSID                 | CH | SEC    | SIG  | SSID\033[0m"
-                    echo -e "\033[1;36m-----------------------------------------------------------\033[0m"
-                    # nmcli ngasih format: BSSID, SSID, CHAN, SECURITY, SIGNAL
+                    echo -e "\033[1;36mBSSID                  | CH | SEC    | SIG  | SSID\033[0m"
+                    echo -e "\033[1;36m--------------------------------------------------------------\033[0m"
                     nmcli -f BSSID,SSID,CHAN,SECURITY,SIGNAL dev wifi list | awk 'NR>1 {
-                        bssid=$1; ssid=""; for(i=2; i<=NF-3; i++) ssid=ssid" "$i; 
-                        chan=$(NF-2); sec=$(NF-1); sig=$NF;
-                        if (ssid=="") ssid="(Hidden)";
-                        printf "%-21s | %-2s | %-6s | %-4s | %s\n", bssid, chan, sec, sig, substr(ssid,2)
+                        bssid=$1; signal=$NF; security=$(NF-1); chan=$(NF-2);
+                        ssid=""; for(i=2; i<=NF-3; i++) ssid=ssid" "$i;
+                        gsub(/^ +| +$/, "", ssid);
+                        if (ssid=="") ssid="(Hidden)"; if (security=="") security="OPEN";
+                        printf "%-22s | %-2s | %-6s | %-4s | %s\n", bssid, chan, security, signal, ssid
                     }'
                 else
                     echo -e "\033[0;31m[!] 'nmcli' tidak ditemukan. Install network-manager.\033[0m"

