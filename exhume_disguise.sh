@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================
-#   MODULE: EXHUME DISGUISE (v6.0 Aggressive Sniffer)
+#   MODULE: EXHUME DISGUISE (v7.0 Multi-Interface)
 # ============================================
 
 if [ -f "./bxp_libcore.sh" ]; then source ./bxp_libcore.sh; fi
@@ -27,6 +27,37 @@ detect_env() {
     else
         ROOT_MODE=0; STATUS_MSG="\033[1;33m[!] NON-ROOT MODE (LIMITED)\033[0m"
     fi
+}
+
+# --- FUNGSI PILIH INTERFACE ---
+pilih_interface() {
+    echo -e "\n${C}=== DAFTAR INTERFACE WIFI ===${N}"
+    # Ambil semua interface wifi yang ada
+    local IFACES=($(iw dev 2>/dev/null | awk '/Interface/{print $2}'))
+    
+    if [ ${#IFACES[@]} -eq 0 ]; then
+        echo -e "\033[0;31m[!] Tidak ada interface WiFi yang terdeteksi.\033[0m"
+        return 1
+    fi
+
+    for i in "${!IFACES[@]}"; do
+        # Cek apakah interface support monitor mode
+        local SUPPORT=$(iw phy $(iw dev ${IFACES[$i]} info 2>/dev/null | grep wiphy | awk '{print $2}') info 2>/dev/null | grep -q "monitor" && echo "[Support Monitor]" || echo "[No Monitor]")
+        echo -e "  \033[1;32m[$((i+1))]\033[0m ${IFACES[$i]} \033[1;33m$SUPPORT\033[0m"
+    done
+
+    echo ""
+    read -p "Pilih nomor interface (default 1): " IFACE_CHOICE
+    IFACE_CHOICE=${IFACE_CHOICE:-1}
+    IFACE=${IFACES[$((IFACE_CHOICE-1))]}
+
+    if [ -z "$IFACE" ]; then
+        echo -e "\033[0;31m[!] Pilihan tidak valid.\033[0m"
+        return 1
+    fi
+    
+    MON_IFACE="$IFACE"
+    return 0
 }
 
 cleanup() {
@@ -87,12 +118,10 @@ while true; do
             ;;
         2)
             if [ "$ROOT_MODE" -eq 0 ]; then echo -e "\n\033[0;31m[!] Butuh Root!\033[0m"; read -p "Press Enter..."; continue; fi
-            echo -e "\n${Y}[*] Menjalankan Hidden SSID Extractor...${N}"
+            pilih_interface || { read -p "Press Enter..."; continue; }
             
-            IFACE=$(iw dev 2>/dev/null | awk '/Interface/{print $2}' | head -n 1)
-            MON_IFACE="$IFACE"
+            echo -e "\n${Y}[*] Menjalankan Hidden SSID Extractor di $IFACE...${N}"
             
-            # Matikan NetworkManager Paksa
             systemctl stop NetworkManager 2>/dev/null
             nmcli radio wifi off 2>/dev/null
             airmon-ng check kill >/dev/null 2>&1
@@ -120,12 +149,10 @@ while true; do
             ;;
         3)
             if [ "$ROOT_MODE" -eq 0 ]; then echo -e "\n\033[0;31m[!] Butuh Root!\033[0m"; read -p "Press Enter..."; continue; fi
-            echo -e "\n${Y}[*] Menangkap Probe Request...${N}"
+            pilih_interface || { read -p "Press Enter..."; continue; }
             
-            IFACE=$(iw dev 2>/dev/null | awk '/Interface/{print $2}' | head -n 1)
-            MON_IFACE="$IFACE"
+            echo -e "\n${Y}[*] Menangkap Probe Request di $IFACE...${N}"
             
-            # Matikan NetworkManager Paksa
             systemctl stop NetworkManager 2>/dev/null
             nmcli radio wifi off 2>/dev/null
             airmon-ng check kill >/dev/null 2>&1
@@ -135,7 +162,6 @@ while true; do
             ip link set "$IFACE" up 2>/dev/null
             
             echo -e "${G}[*] Menangkap paket di background (TANPA FILTER)...${N}"
-            # Buang filter, tcpdump semua paket
             tcpdump -i "$MON_IFACE" -e -s 256 > /tmp/probe_capture.txt 2>&1 &
             TCPDUMP_PID=$!
             
@@ -147,7 +173,6 @@ while true; do
             wait $TCPDUMP_PID 2>/dev/null
             
             echo -e "\n${G}[+] Hasil (Menyaring Probe Request & Beacon):${N}"
-            # Filter manual pake grep
             grep -iE "Probe Request|Beacon" /tmp/probe_capture.txt | head -n 20
             
             cleanup
