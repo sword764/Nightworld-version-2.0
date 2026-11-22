@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================
-#   MODULE: EXHUME DISGUISE (v4.1 Anti-Bug pkill)
+#   MODULE: EXHUME DISGUISE (v5.0 Anti-Freeze)
 # ============================================
 
 if [ -f "./bxp_libcore.sh" ]; then source ./bxp_libcore.sh; fi
@@ -32,26 +32,20 @@ detect_env() {
 # --- FUNGSI CLEANUP (PAKE PKILL -9 BIAR MATI TOTAL) ---
 cleanup() {
     echo -e "\n\033[0;33m[*] Memaksa proses berhenti & mengembalikan mode normal...\033[0m"
-    
-    # Paksa mati semua proses yang nyangkut pake pkill -9
     pkill -9 -f "airodump-ng" 2>/dev/null
     pkill -9 -f "tcpdump" 2>/dev/null
     pkill -9 -f "aireplay-ng" 2>/dev/null
     pkill -9 -f "wpa_supplicant" 2>/dev/null
-    
-    # Balikin mode Wi-Fi
     if [ -n "$MON_IFACE" ]; then
         ip link set "$MON_IFACE" down 2>/dev/null
         iw dev "$MON_IFACE" set type managed 2>/dev/null
         ip link set "$MON_IFACE" up 2>/dev/null
     fi
-    
-    # Restart NetworkManager (Biar Internet Nyala Lagi)
     systemctl restart NetworkManager 2>/dev/null
     svc wifi enable 2>/dev/null
+    sleep 1
 }
 
-# Trap CTRL+C biar ngejalanin cleanup
 trap cleanup SIGINT SIGTERM
 
 while true; do
@@ -105,11 +99,19 @@ while true; do
             iw dev "$IFACE" set type monitor 2>/dev/null
             ip link set "$IFACE" up 2>/dev/null
             
-            echo -e "${G}[*] Scanning Wi-Fi (Tekan CTRL+C untuk stop)...${N}"
-            # Pake timeout, tapi kalo di CTRL+C, trap bakal ngejalanin pkill -9
-            timeout 30 airodump-ng "$MON_IFACE" --band abg --output-format csv -w /tmp/nw_hidden_scan
+            echo -e "${G}[*] Scanning Wi-Fi di background...${N}"
+            # Jalanin di background, simpen PID
+            airodump-ng "$MON_IFACE" --band abg --output-format csv -w /tmp/nw_hidden_scan > /dev/null 2>&1 &
+            AIRODUMP_PID=$!
             
-            echo -e "\n${G}[+] Scan Selesai/Dibatalkan. Mengekstrak Hidden SSID...${N}"
+            echo -e "\033[1;33m[*] Scanning berjalan. Tekan [ENTER] untuk STOP & melihat hasil...\033[0m"
+            read -r # Nunggu user pencet Enter
+            
+            echo -e "\n${Y}[*] Menghentikan scan...${N}"
+            kill -9 $AIRODUMP_PID 2>/dev/null
+            wait $AIRODUMP_PID 2>/dev/null
+            
+            echo -e "\n${G}[+] Mengekstrak Hidden SSID...${N}"
             awk -F',' '/^([0-9A-F]{2}:){5}[0-9A-F]{2}/ {print "BSSID: "$1" | CH: "$4" | ESSID: "$14}' /tmp/nw_hidden_scan-01.csv 2>/dev/null | grep -iE "hidden|length|" | head -n 10
             
             cleanup
@@ -127,8 +129,19 @@ while true; do
             iw dev "$IFACE" set type monitor 2>/dev/null
             ip link set "$IFACE" up 2>/dev/null
             
-            echo -e "${G}[*] Menangkap paket (Tekan CTRL+C untuk stop)...${N}"
-            timeout 20 tcpdump -i "$MON_IFACE" -e -s 256 type mgt subtype probe-req
+            echo -e "${G}[*] Menangkap paket di background...${N}"
+            tcpdump -i "$MON_IFACE" -e -s 256 type mgt subtype probe-req > /tmp/probe_capture.txt 2>&1 &
+            TCPDUMP_PID=$!
+            
+            echo -e "\033[1;33m[*] Menangkap probe. Tekan [ENTER] untuk STOP...\033[0m"
+            read -r
+            
+            echo -e "\n${Y}[*] Menghentikan capture...${N}"
+            kill -9 $TCPDUMP_PID 2>/dev/null
+            wait $TCPDUMP_PID 2>/dev/null
+            
+            echo -e "\n${G}[+] Hasil Probe Request (Disimpan di /tmp/probe_capture.txt):${N}"
+            cat /tmp/probe_capture.txt | head -n 20
             
             cleanup
             read -p "Press Enter to continue..."
