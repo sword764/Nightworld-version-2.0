@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================
-#   BXP CORE LIBRARY v2.5 (Cinematic + Auto-Dep + Proxy)
+#   BXP CORE LIBRARY v2.6 (Cinematic + Auto-Dep + Sync Marker)
 #   By Bogor X Ploit x Ijul v2.0
 # ============================================
 
@@ -100,8 +100,11 @@ bxp_boot_sequence() {
     local IS_ROOT=0
     local ENV_TYPE="Unknown"
     
-    # Cek Marker Install
-    local MARKER_FILE=".${TOOL_NAME,,}.sh.installed"
+    # --- FIX SINKRONISASI NAMA MARKER ---
+    # Ngubah "SHADOW LINEAGE" jadi "shadow_lineage" biar sinkron sama nightworld.sh
+    local CLEAN_NAME=$(echo "$TOOL_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
+    local MARKER_FILE=".${CLEAN_NAME}.sh.installed"
+    
     local IS_NEW_INSTALL=0
     if [ ! -f "$MARKER_FILE" ]; then
         IS_NEW_INSTALL=1
