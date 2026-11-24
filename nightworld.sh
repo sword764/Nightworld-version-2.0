@@ -16,6 +16,11 @@ if [ ! -f "bxp_libcore.sh" ]; then
 fi
 source ./bxp_libcore.sh
 
+# --- LOAD VPN ENVIRONMENT (PATCH Ijul) ---
+if [ -f "$HOME/.nightworld_vpn_env" ]; then
+    source "$HOME/.nightworld_vpn_env"
+fi
+
 if ! command -v bxp_ascii_title >/dev/null 2>&1; then
     C='\033[0;36m'; N='\033[0m'
     bxp_ascii_title() { echo -e "${C}=== $1 ===${N}\n"; }
@@ -51,21 +56,12 @@ detect_env() {
     export OS_NAME ROOT_STATUS IS_TERMUX ARCH KERNEL DEV_MODEL USER_NAME ANDROID_VER CPU_ABI COLS
 }
 
-# --- LAYOUT UTILITY ---
-print_line() {
-    local char="$1"
-    local w=$(tput cols 2>/dev/null || echo 80)
-    [ "$w" -gt 100 ] && w=100
-    local str=$(printf "%${w}s" | tr ' ' "$char")
-    echo -e "${C}${str}${N}"
-}
-
 clear_screen() {
     clear
     printf '\033[3J'
 }
 
-# --- ASCII MAIN HEADER (ASLI DARI TUAN) ---
+# --- ASCII MAIN HEADER ---
 ascii_mobile() { cat <<'ASCII'
         /\
        /  \
@@ -139,52 +135,59 @@ ASCII
 }
 
 show_banner() {
-    print_line "-"
-    echo -e "  NIGHT WORLD ${C}|${W} By bogor x ploit"
-    print_line "-"
-    echo -e "  Version : v${VERSION}"
-    echo -e "  OS      : ${OS_NAME}"
-    echo -e "  Device  : ${DEV_MODEL}"
-    echo -e "  User    : ${USER_NAME}"
-    echo -e "  Access  : ${ROOT_STATUS}"
-    print_line "-"
+    echo -e "${C}--------------------------------------------------${N}"
+    echo -e "${W}  NIGHT WORLD ${C}|${W} By bogor x ploit${N}"
+    echo -e "${C}--------------------------------------------------${N}"
+    echo -e "${Y}  Version : ${W}v${VERSION}${N}"
+    echo -e "${Y}  OS      : ${W}${OS_NAME}${N}"
+    echo -e "${Y}  Device  : ${W}${DEV_MODEL}${N}"
+    echo -e "${Y}  User    : ${W}${USER_NAME}${N}"
+    echo -e "${Y}  Access  : ${W}${ROOT_STATUS}${N}"
+    echo -e "${C}--------------------------------------------------${N}"
 }
 
 show_menu() {
     echo -e "${G}  # MAIN MENU #${N}"
-    print_line "="
+    echo -e "${C}  ==================================================${N}"
     echo ""
     echo -e "  \033[1;36m[1]\033[0m  \033[1;37mCyber Kill Chain\033[0m"
+    echo ""
     echo -e "  \033[1;36m[2]\033[0m  \033[1;37mExploitation\033[0m"
+    echo ""
     echo -e "  \033[1;36m[3]\033[0m  \033[1;37mNetscan\033[0m"
+    echo ""
     echo -e "  \033[1;36m[4]\033[0m  \033[1;37mUser Guide\033[0m"
+    echo ""
     echo -e "  \033[1;36m[5]\033[0m  \033[1;37mVPN / Proxy\033[0m"
     echo ""
     echo -e "  \033[1;31m[0]\033[0m  \033[1;37mExit\033[0m"
     echo ""
-    print_line "="
+    echo -e "${C}  ==================================================${N}"
 }
 
 menu_kill_chain() {
     while true; do
         clear_screen
-        print_line "="
-        echo -e "    TOOLS HUB | Cyber Kill Chain"
-        print_line "="
+        echo -e "${C}  ==================================================${N}"
+        echo -e "${W}    TOOLS HUB ${C}|${W} Cyber Kill Chain${N}"
+        echo -e "${C}  ==================================================${N}"
         echo ""
         echo -e "  \033[1;32m[1]\033[0m  \033[1;37mCyber Attack (API/Web)\033[0m"
+        echo ""
         echo -e "  \033[1;32m[2]\033[0m  \033[1;37mPhising (Credential Harvester)\033[0m"
+        echo ""
         echo -e "  \033[1;31m[3]\033[0m  \033[1;37mBack to Main Menu\033[0m"
         echo ""
-        print_line "-"
-        echo -ne "  Select menu > "
+        echo -e "${C}  --------------------------------------------------${N}"
+        echo ""
+        echo -ne "  ${Y}Select menu > ${N}"
         read -r kc_choice
 
         case "$kc_choice" in
             1) run_tool "CYBER ATTACK" "cyber_attack.sh" ;;
             2) run_tool "PHISING" "phising.sh" ;;
             3) return ;;
-            *) echo -e "  [!] Invalid choice."; sleep 1 ;;
+            *) echo -e "  ${R}[!] Invalid choice.${N}"; sleep 1 ;;
         esac
     done
 }
@@ -192,18 +195,23 @@ menu_kill_chain() {
 menu_netscan() {
     while true; do
         clear_screen
-        print_line "="
-        echo -e "    TOOLS HUB | Netscan (Wi-Fi)"
-        print_line "="
+        echo -e "${C}  ==================================================${N}"
+        echo -e "${W}    TOOLS HUB ${C}|${W} Netscan (Wi-Fi)${N}"
+        echo -e "${C}  ==================================================${N}"
         echo ""
         echo -e "  \033[1;32m[1]\033[0m  \033[1;37mExhume Disguise\033[0m"
+        echo ""
         echo -e "  \033[1;32m[2]\033[0m  \033[1;37mChoke The Hunters\033[0m"
+        echo ""
         echo -e "  \033[1;32m[3]\033[0m  \033[1;37mReclaim Catch In Mid-Air\033[0m"
+        echo ""
         echo -e "  \033[1;32m[4]\033[0m  \033[1;37mOuija Magnifying Glass\033[0m"
+        echo ""
         echo -e "  \033[1;31m[5]\033[0m  \033[1;37mBack to Main Menu\033[0m"
         echo ""
-        print_line "-"
-        echo -ne "  Select menu > "
+        echo -e "${C}  --------------------------------------------------${N}"
+        echo ""
+        echo -ne "  ${Y}Select menu > ${N}"
         read -r ns_choice
 
         case "$ns_choice" in
@@ -212,7 +220,7 @@ menu_netscan() {
             3) run_tool "RECLAIM CATCH" "reclaim_catch.sh" ;;
             4) run_tool "OUIJA MAGNIFYING" "ouija_magnifying.sh" ;;
             5) return ;;
-            *) echo -e "  [!] Invalid choice."; sleep 1 ;;
+            *) echo -e "  ${R}[!] Invalid choice.${N}"; sleep 1 ;;
         esac
     done
 }
@@ -220,17 +228,21 @@ menu_netscan() {
 menu_exploit() {
     while true; do
         clear_screen
-        print_line "="
-        echo -e "    TOOLS HUB | Exploitation"
-        print_line "="
+        echo -e "${C}  ==================================================${N}"
+        echo -e "${W}    TOOLS HUB ${C}|${W} Exploitation${N}"
+        echo -e "${C}  ==================================================${N}"
         echo ""
         echo -e "  \033[1;32m[1]\033[0m  \033[1;37mNYCTOPHOBIA\033[0m"
+        echo ""
         echo -e "  \033[1;32m[2]\033[0m  \033[1;37mSLEEP PARALYSIS\033[0m"
+        echo ""
         echo -e "  \033[1;32m[3]\033[0m  \033[1;37mNOCTURNAL DECAY\033[0m"
+        echo ""
         echo -e "  \033[1;31m[4]\033[0m  \033[1;37mBack to Main Menu\033[0m"
         echo ""
-        print_line "-"
-        echo -ne "  Select menu > "
+        echo -e "${C}  --------------------------------------------------${N}"
+        echo ""
+        echo -ne "  ${Y}Select menu > ${N}"
         read -r sub_pilihan
 
         case "$sub_pilihan" in
@@ -238,7 +250,7 @@ menu_exploit() {
             2) run_tool "SLEEP PARALYSIS" "sleep_paralysis.sh" ;;
             3) run_tool "NOCTURNAL DECAY" "nocturnal_decay.sh" ;;
             4) return ;;
-            *) echo -e "  [!] Invalid choice."; sleep 1 ;;
+            *) echo -e "  ${R}[!] Invalid choice.${N}"; sleep 1 ;;
         esac
     done
 }
@@ -266,63 +278,10 @@ run_tool() {
     
     clear_screen
     
-    # --- LOGIKA TAMPILAN ASCII ASLI DARI TUAN ---
-    case "$TOOL_NAME" in
-        "EXHUME DISGUISE")
-            echo -e "\033[38;2;255;0;0m" # MERAH
-            cat <<'ASCII'
-███████╗██╗  ██╗██╗  ██╗██╗   ██╗███╗   ███╗███████╗    ██████╗ ██╗███████╗ ██████╗ ██╗   ██╗██╗███████╗███████╗
-██╔════╝╚██╗██╔╝██║  ██║██║   ██║████╗ ████║██╔════╝    ██╔══██╗██║██╔════╝██╔════╝ ██║   ██║██║██╔════╝██╔════╝
-█████╗   ╚███╔╝ ███████║██║   ██║██╔████╔██║█████╗      ██║  ██║██║███████╗██║  ███╗██║   ██║██║███████╗█████╗  
-██╔══╝   ██╔██╗ ██╔══██║██║   ██║██║╚██╔╝██║██╔══╝      ██║  ██║██║╚════██║██║   ██║██║   ██║██║╚════██║██╔══╝  
-███████╗██╔╝ ██╗██║  ██║╚██████╔╝██║ ╚═╝ ██║███████╗    ██████╔╝██║███████║╚██████╔╝╚██████╔╝██║███████║███████╗
-╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝    ╚═════╝ ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝╚══════╝╚══════╝
-ASCII
-            echo -e "\033[0m"
-            ;;
-        "CHOKE THE HUNTERS")
-            echo -e "\033[38;2;255;215;0m" # EMAS
-            cat <<'ASCII'
-██████╗██╗  ██╗ ██████╗ ██╗  ██╗███████╗    ████████╗██╗  ██╗███████╗    ██╗  ██╗██╗   ██╗███╗   ██╗████████╗███████╗██████╗ ███████╗
-██╔════╝██║  ██║██╔═══██╗██║ ██╔╝██╔════╝    ╚══██╔══╝██║  ██║██╔════╝    ██║  ██║██║   ██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗██╔════╝
-██║     ███████║██║   ██║█████╔╝ █████╗         ██║   ███████║█████╗      ███████║██║   ██║██╔██╗ ██║   ██║   █████╗  ██████╔╝███████╗
-██║     ██╔══██║██║   ██║██╔═██╗ ██╔══╝         ██║   ██╔══██║██╔══╝      ██╔══██║██║   ██║██║╚██╗██║   ██║   ██╔══╝  ██╔══██╗╚════██║
-╚██████╗██║  ██║╚██████╔╝██║  ██╗███████╗       ██║   ██║  ██║███████╗    ██║  ██║╚██████╔╝██║ ╚████║   ██║   ███████╗██║  ██║███████║
- ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝       ╚═╝   ╚═╝  ╚═╝╚══════╝    ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
-ASCII
-            echo -e "\033[0m"
-            ;;
-        "RECLAIM CATCH")
-            echo -e "\033[38;2;148;0;211m" # UNGU
-            cat <<'ASCII'
-██████╗ ███████╗ ██████╗██╗      █████╗ ██╗███╗   ███╗     ██████╗ █████╗ ████████╗ ██████╗██╗  ██╗
-██╔══██╗██╔════╝██╔════╝██║     ██╔══██╗██║████╗ ████║    ██╔════╝██╔══██╗╚══██╔══╝██╔════╝██║  ██║
-██████╔╝█████╗  ██║     ██║     ███████║██║██╔████╔██║    ██║     ███████║   ██║   ██║     ███████║
-██╔══██╗██╔══╝  ██║     ██║     ██╔══██║██║██║╚██╔╝██║    ██║     ██╔══██║   ██║   ██║     ██╔══██║
-██║  ██║███████╗╚██████╗███████╗██║  ██║██║██║ ╚═╝ ██║    ╚██████╗██║  ██║   ██║   ╚██████╗██║  ██║
-╚═╝  ╚═╝╚══════╝ ╚═════╝╚══════╝╚═╝  ╚═╝╚═╝╚═╝     ╚═╝     ╚═════╝╚═╝  ╚═╝   ╚═╝    ╚═════╝╚═╝  ╚═╝
-ASCII
-            echo -e "\033[0m"
-            ;;
-        "OUIJA MAGNIFYING")
-            echo -e "\033[38;2;0;255;255m" # CYAN
-            cat <<'ASCII'
- ██████╗ ██╗   ██╗██╗     ██╗ █████╗     ███╗   ███╗ █████╗  ██████╗ ███╗   ██╗██╗███████╗██╗   ██╗
-██╔═══██╗██║   ██║██║    ██║██╔══██╗    ████╗ ████║██╔══██╗██╔════╝ ████╗  ██║██║██╔════╝╚██╗ ██╔╝
-██║   ██║██║   ██║██║    ██║███████║    ██╔████╔██║███████║██║  ███╗██╔██╗ ██║██║█████╗   ╚████╔╝ 
-██║   ██║██║   ██║██║    ██║██╔══██║    ██║╚██╔╝██║██╔══██║██║   ██║██║╚██╗██║██║██╔══╝    ╚██╔╝  
-╚██████╔╝╚██████╔╝███████╗██║██║  ██║    ██║ ╚═╝ ██║██║  ██║╚██████╔╝██║ ╚████║██║██║        ██║   
- ╚═════╝  ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═╝    ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝╚═╝        ╚═╝   
-ASCII
-            echo -e "\033[0m"
-            ;;
-        *)
-            bxp_ascii_title "$TOOL_NAME"
-            ;;
-    esac
-    # --------------------------------------------------
-
-    print_line "="
+    # Panggil ASCII Title dari library Tuan (Warna udah dihandle di bxp_libcore.sh)
+    bxp_ascii_title "$TOOL_NAME"
+    
+    echo -e "${C}  ==================================================${N}"
     
     if [ -f "$MARKER_FILE" ]; then
         echo -e "  ${G}[+] Module $TOOL_NAME is already installed. Booting up...${N}"
@@ -345,6 +304,7 @@ ASCII
         touch "$MARKER_FILE"
     fi
 
+    # --- ANIMASI LOADING BAR ---
     echo ""
     echo -ne "  Installing... ["
     for i in {1..20}; do
@@ -355,11 +315,13 @@ ASCII
     echo ""
     sleep 0.5
 
+    # --- PANGGIL BOOT SEQUENCE DARI LIBRARY TUAN ---
     bxp_boot_sequence "$TOOL_NAME"
     
     echo ""
     chmod +x "$FILE_NAME" 2>/dev/null
     
+    # JALANKAN MODUL
     bash "$FILE_NAME"
     MODULE_EXIT=$?
     
@@ -373,10 +335,10 @@ ASCII
 
 user_guide() {
     clear_screen
-    print_line "="
-    echo -e "               USER GUIDE / MANUAL"
-    echo -e "               NIGHT WORLD v2.0"
-    print_line "="
+    echo -e "${C}  ==================================================${N}"
+    echo -e "${W}               USER GUIDE / MANUAL${N}"
+    echo -e "${W}               NIGHT WORLD v2.0${N}"
+    echo -e "${C}  ==================================================${N}"
     echo ""
     echo -e "  ${Y}[1] INSTALLATION PROCESS${N}"
     echo -e "    - Select a category (Cyber / Exploit / Netscan)."
@@ -394,7 +356,7 @@ user_guide() {
     echo -e "    - Do not close the terminal while a listener is running."
     echo -e "    - Press CTRL+C to stop the listener safely."
     echo ""
-    print_line "="
+    echo -e "${C}  ==================================================${N}"
     read -p "  Press Enter to return to main menu..."
 }
 

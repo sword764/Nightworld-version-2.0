@@ -51,12 +51,38 @@ bxp_check_root() {
     fi
 }
 
-# --- 5. BXP BOOT SEQUENCE ENGINE (SMART ADAPTIVE CHECK) ---
+# --- 5. BXP BOOT SEQUENCE ENGINE (SMART ADAPTIVE CHECK + AUTO DEP) ---
+bxp_ensure_deps() {
+    local deps=("openssl" "curl" "ping" "awk" "grep")
+    local missing=()
+    
+    for cmd in "${deps[@]}"; do
+        if ! command -v "$cmd" >/dev/null 2>&1 && ! type -P "$cmd" >/dev/null 2>&1; then
+            missing+=("$cmd")
+        fi
+    done
+
+    if [ ${#missing[@]} -eq 0 ]; then return 0; fi
+
+    if [ -n "$PREFIX" ] && echo "$PREFIX" | grep -qi "com.termux"; then
+        pkg update -y >/dev/null 2>&1
+        pkg install -y "${missing[@]}" >/dev/null 2>&1
+    elif command -v apt >/dev/null 2>&1; then
+        sudo apt update -y >/dev/null 2>&1
+        sudo apt install -y "${missing[@]}" >/dev/null 2>&1
+    elif command -v pacman >/dev/null 2>&1; then
+        sudo pacman -Sy --noconfirm "${missing[@]}" >/dev/null 2>&1
+    fi
+}
+
 bxp_boot_sequence() {
     local TOOL_NAME="$1"
     local START_TIME=$(date +%s%3N)
     local IS_ROOT=0
     local ENV_TYPE="Unknown"
+    
+    # --- JALANIN AUTO-INSTALLER DULU ---
+    bxp_ensure_deps
     
     if [ "$(id -u)" -eq 0 ]; then IS_ROOT=1
     elif command -v su >/dev/null 2>&1 && timeout 3 su -c id >/dev/null 2>&1; then IS_ROOT=1
@@ -64,12 +90,47 @@ bxp_boot_sequence() {
     
     if [ -n "$PREFIX" ] && echo "$PREFIX" | grep -qi "com.termux"; then ENV_TYPE="Termux"; else ENV_TYPE="PC"; fi
     
-    bxp_step_sleep() { sleep 0.3; }
+    bxp_step_sleep() { sleep "${BXP_SLEEP_FAST:-0.15}"; }
+    bxp_step_sleep_slow() { sleep "${BXP_SLEEP_SLOW:-0.45}"; }
 
-    echo -e "  ${Y}[*] Synchronizing protocols preparing runtime...${N}"
-    bxp_step_sleep
+    # --- TEKS DINAMIS PER TOOL ---
+    case "$TOOL_NAME" in
+        "EXHUME DISGUISE")
+            local msg1="Preparing stealth layer..."
+            local msg2="Hiding process tracks..."
+            local msg3="Bypassing network monitor..."
+            ;;
+        "CHOKE THE HUNTERS")
+            local msg1="Initializing packet interceptor..."
+            local msg2="Throttling connection..."
+            local msg3="Dropping suspicious packets..."
+            ;;
+        "RECLAIM CATCH")
+            local msg1="Entering promiscuous mode..."
+            local msg2="Sniffing mid-air packets..."
+            local msg3="Extracting raw data..."
+            ;;
+        "OUIJA MAGNIFYING")
+            local msg1="Calibrating magnifying lens..."
+            local msg2="Scanning hidden frequencies..."
+            local msg3="Rendering network map..."
+            ;;
+        "NYCTOPHOBIA")
+            local msg1="Hooking session listener..."
+            local msg2="Binding port 2010..."
+            local msg3="Awaiting dark connections..."
+            ;;
+        *)
+            local msg1="Synchronizing protocols preparing runtime..."
+            local msg2="Initializing core processes..."
+            local msg3="Loading cryptographic engine..."
+            ;;
+    esac
+
+    # --- MULAI PROSES LOADING TEKS ---
+    echo -e "  ${Y}[*] ${msg1}${N}"
+    bxp_step_sleep_slow
     echo -e "  ${G}[ OK ]${N} bash version: ${BASH_VERSION}"
-    echo -e "  ${C}...${N}"
     bxp_step_sleep
     
     echo -ne "  ${Y}[*] Checking privilege level...${N}"
@@ -96,9 +157,13 @@ bxp_boot_sequence() {
         if command -v iw >/dev/null 2>&1 && iw dev 2>/dev/null | grep -q "monitor"; then echo -e " ${G}[ OK ] Supported${N}"; else echo -e " ${R}[ FAIL ] Not Supported${N}"; fi
     fi
 
-    echo -ne "  ${Y}[*] Loading cryptographic engine...${N}"
+    echo -ne "  ${Y}[*] ${msg3}...${N}"
     bxp_step_sleep
-    if command -v openssl >/dev/null 2>&1; then echo -e " ${G}[ OK ]${N}"; else echo -e " ${R}[ NOT FOUND ] fallback bash${N}"; fi
+    if command -v openssl >/dev/null 2>&1 || type -P openssl >/dev/null 2>&1; then 
+        echo -e " ${G}[ OK ]${N}"
+    else 
+        echo -e " ${R}[ NOT FOUND ] fallback bash${N}"
+    fi
 
     echo -ne "  ${Y}[*] Verifying proxy configuration...${N}"
     bxp_step_sleep
@@ -112,7 +177,7 @@ bxp_boot_sequence() {
         if [ -w "$HOME" ]; then echo -e " ${G}[ OK ] Home directory writable${N}"; else echo -e " ${R}[ DENIED ] No write access${N}"; fi
     fi
 
-    echo -ne "  ${Y}[*] Allocating memory for ${TOOL_NAME}...${N}"
+    echo -ne "  ${Y}[*] ${msg2}...${N}"
     bxp_step_sleep
     if [ -f /proc/meminfo ]; then
         MEM_AVAIL=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
@@ -142,7 +207,7 @@ bxp_boot_sequence() {
     local ELAPSED=$((END_TIME - START_TIME))
     
     echo -e "  ${G}[ SUCCESS ]${N} LAUNCHING ${W}${TOOL_NAME}${N}"
-    sleep 0.5
+    bxp_step_sleep_slow
     echo -e "  ${G}[+] Module ready. (${ELAPSED}ms)${N}"
 }
 
@@ -154,7 +219,7 @@ bxp_ascii_title() {
     
     case "$title" in
         "NYCTOPHOBIA")
-            echo -e "${C}"
+            echo -e "\033[38;2;0;255;255m" # Cyan
             cat <<'ASCII'
  _   _  __   __  ____  _____  ___   ____   _   _   ___   ____  ___   _    
 | \ | | \ \ / / / ___||_   _|/ _ \ |  _ \ | | | | / _ \ | __ )|_ _| / \   
@@ -162,9 +227,9 @@ bxp_ascii_title() {
 | |\  |   | |  | |___   | | | |_| ||  __/ |  _  || |_| || |_) || ||  _  | 
 |_| \_|   |_|   \____|  |_|  \___/ |_|    |_| |_| \___/ |____/|___|_| |_| 
 ASCII
-            echo -e "${N}\n" ;;
+            echo -e "\033[0m\n" ;;
         "SLEEP PARALYSIS")
-            echo -e "${R}"
+            echo -e "\033[38;2;255;0;0m" # Merah
             cat <<'ASCII'
  ____  _      ____  ____  ____    ____    _    ____  _      __   __  ___  ____  
 / ___|| |    | ____|  _ \|  _ \  |  _ \  / \  |  _ \| |     \ \ / / / _ \|  _ \ 
@@ -172,9 +237,9 @@ ASCII
  ___) | |___ | |___|  __/|  __/  |  __// ___ \|  _ <| |___    | |  | |_| |  _ / 
 |____/|_____||_____|_|   |_|     |_|  /_/   \_\_| \_\_____|   |_|   \___/|_| \_\
 ASCII
-            echo -e "${N}\n" ;;
+            echo -e "\033[0m\n" ;;
         "NOCTURNAL DECAY")
-            echo -e "${Y}"
+            echo -e "\033[38;2;255;215;0m" # Emas
             cat <<'ASCII'
  _   _  ____   ____  _____  _   _  ____    _     ____    ____   ____   _   __   __
 | \ | |/ __ \ / ___||_   _|| | | ||  _ \  / \   |  _ \  |  _ \ / ___| / \  \ \ / /
@@ -182,9 +247,9 @@ ASCII
 | |\  | |__| | |___   | |  | |_| ||  _ <|  _  | | |_| | |  _ <| |___/ ___ \  | |  
 |_| \_|\____/ \____|  |_|   \___/ |_| \_\_| |_| |____/  |_| \_\\____/_/   \_\ |_|  
 ASCII
-            echo -e "${N}\n" ;;
+            echo -e "\033[0m\n" ;;
         "CYBER ATTACK")
-            echo -e "${C}"
+            echo -e "\033[38;2;0;255;255m" # Cyan
             cat <<'ASCII'
   ██████╗██╗   ██╗██████╗ ███████╗██████╗     █████╗ ████████╗████████╗ █████╗  ██████╗██╗  ██╗
  ██╔════╝╚██╗ ██╔╝██╔══██╗██╔════╝██╔══██╗   ██╔══██╗╚══██╔══╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝
@@ -193,47 +258,51 @@ ASCII
  ╚██████╗   ██║   ██████╔╝███████╗██║  ██║   ██║  ██║   ██║      ██║   ██║  ██║╚██████╗██║  ██╗
   ╚═════╝   ╚═╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝   ╚═╝  ╚═╝   ╚═╝      ╚═╝   ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
 ASCII
-            echo -e "${N}\n" ;;
+            echo -e "\033[0m\n" ;;
         "EXHUME DISGUISE")
-            echo -e "${C}"
+            echo -e "\033[38;2;255;0;0m" # MERAH (Sesuai nightworld.sh)
             cat <<'ASCII'
-  _____  __  __  _   _  _   _  _____    ____  ___  ____  _   _  _____  _____ 
- | ____| \ \/ / | | | || | | || ____|  |  _ \|_ _|/ ___|| | | |/ ___|| ____|
- |  _|    \  /  | |_| || | | ||  _|    | | | || |\___ \| | | |\___ \|  _|  
- | |___   /  \  |  _  || |_| || |___   | |_| || | ___) | |_| | ___) | |___ 
- |_____| /_/\_\ |_| |_| \___/ |_____|  |____/|___|____/ \___/ |____/|_____|
+███████╗██╗  ██╗██╗  ██╗██╗   ██╗███╗   ███╗███████╗    ██████╗ ██╗███████╗ ██████╗ ██╗   ██╗██╗███████╗███████╗
+██╔════╝╚██╗██╔╝██║  ██║██║   ██║████╗ ████║██╔════╝    ██╔══██╗██║██╔════╝██╔════╝ ██║   ██║██║██╔════╝██╔════╝
+█████╗   ╚███╔╝ ███████║██║   ██║██╔████╔██║█████╗      ██║  ██║██║███████╗██║  ███╗██║   ██║██║███████╗█████╗  
+██╔══╝   ██╔██╗ ██╔══██║██║   ██║██║╚██╔╝██║██╔══╝      ██║  ██║██║╚════██║██║   ██║██║   ██║██║╚════██║██╔══╝  
+███████╗██╔╝ ██╗██║  ██║╚██████╔╝██║ ╚═╝ ██║███████╗    ██████╔╝██║███████║╚██████╔╝╚██████╔╝██║███████║███████╗
+╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝    ╚═════╝ ╚═╝╚══════╝ ╚═════╝  ╚═════╝ ╚═╝╚══════╝╚══════╝
 ASCII
-            echo -e "${N}\n" ;;
+            echo -e "\033[0m\n" ;;
         "CHOKE THE HUNTERS")
-            echo -e "${R}"
+            echo -e "\033[38;2;255;215;0m" # EMAS (Sesuai nightworld.sh)
             cat <<'ASCII'
-   ____  _   _  ___   ____  _  __ _____    _____  _   _  _____    _   _  _   _  _   _  _____  ____  ____   _____  ____  
-  / ___|| | | |/ _ \ |  _ \| |/ /| ____|  |_   _|| | | ||  ___|  | | | || | | || \ | || ____||  _ \|  _ \ / ___||  _ \ 
- | |    | |_| | | | || |_) | ' / |  _|      | |  | |_| || |__    | |_| || |_| ||  \| ||  _|  | |_) | |_) |\___ \| |_) |
- | |___ |  _  | |_| ||  _ <| . \ | |___     | |  |  _  ||  __|   |  _  ||  _  || |\  || |___ |  _ <|  _ < ___) |  _ / 
-  \____||_| |_|\___/ |_| \_\_|\_\|_____|    |_|  |_| |_||_|      |_| |_||_| |_||_| \_||_____||_| \_\_| \_\____/|_| \_\
+██████╗██╗  ██╗ ██████╗ ██╗  ██╗███████╗    ████████╗██╗  ██╗███████╗    ██╗  ██╗██╗   ██╗███╗   ██╗████████╗███████╗██████╗ ███████╗
+██╔════╝██║  ██║██╔═══██╗██║ ██╔╝██╔════╝    ╚══██╔══╝██║  ██║██╔════╝    ██║  ██║██║   ██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗██╔════╝
+██║     ███████║██║   ██║█████╔╝ █████╗         ██║   ███████║█████╗      ███████║██║   ██║██╔██╗ ██║   ██║   █████╗  ██████╔╝███████╗
+██║     ██╔══██║██║   ██║██╔═██╗ ██╔══╝         ██║   ██╔══██║██╔══╝      ██╔══██║██║   ██║██║╚██╗██║   ██║   ██╔══╝  ██╔══██╗╚════██║
+╚██████╗██║  ██║╚██████╔╝██║  ██╗███████╗       ██║   ██║  ██║███████╗    ██║  ██║╚██████╔╝██║ ╚████║   ██║   ███████╗██║  ██║███████║
+ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝       ╚═╝   ╚═╝  ╚═╝╚══════╝    ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝
 ASCII
-            echo -e "${N}\n" ;;
+            echo -e "\033[0m\n" ;;
         "RECLAIM CATCH")
-            echo -e "${G}"
+            echo -e "\033[38;2;148;0;211m" # UNGU (Sesuai nightworld.sh)
             cat <<'ASCII'
-  ____  _____  ____  _        _     ___  __  __    ____    _  _____  ____  _   _ 
- |  _ \| ____|/ ___|| |      / \   |_ _| \ \/ /   / ___|  / \|_   _|/ ___|| | | |
- | |_) |  _| | |    | |     / _ \   | |   \  /   | |     / _ \ | |  \___ \| |_| |
- |  _ <| |___| |___ | |___ / ___ \  | |   /  \   | |___ / ___ \| |   ___) |  _  |
- |_| \_\_____|\____||_____/_/   \_\|___| /_/\_\   \____/_/   \_\_|  |____/|_| |_|
+██████╗ ███████╗ ██████╗██╗      █████╗ ██╗███╗   ███╗     ██████╗ █████╗ ████████╗ ██████╗██╗  ██╗
+██╔══██╗██╔════╝██╔════╝██║     ██╔══██╗██║████╗ ████║    ██╔════╝██╔══██╗╚══██╔══╝██╔════╝██║  ██║
+██████╔╝█████╗  ██║     ██║     ███████║██║██╔████╔██║    ██║     ███████║   ██║   ██║     ███████║
+██╔══██╗██╔══╝  ██║     ██║     ██╔══██║██║██║╚██╔╝██║    ██║     ██╔══██║   ██║   ██║     ██╔══██║
+██║  ██║███████╗╚██████╗███████╗██║  ██║██║██║ ╚═╝ ██║    ╚██████╗██║  ██║   ██║   ╚██████╗██║  ██║
+╚═╝  ╚═╝╚══════╝ ╚═════╝╚══════╝╚═╝  ╚═╝╚═╝╚═╝     ╚═╝     ╚═════╝╚═╝  ╚═╝   ╚═╝    ╚═════╝╚═╝  ╚═╝
 ASCII
-            echo -e "${N}\n" ;;
+            echo -e "\033[0m\n" ;;
         "OUIJA MAGNIFYING")
-            echo -e "${Y}"
+            echo -e "\033[38;2;0;255;255m" # CYAN (Sesuai nightworld.sh)
             cat <<'ASCII'
-   ___  _   _ ___ _  _    _      __  __    _    ____ _   _ _____ _____ _   _  ____  
-  / _ \| | | |_ _| \| |  / \    |  \/  |  / \  / ___| | | |  ___|  ___| | | |/ ___| 
- | | | | | | || ||  ` | / _ \   | |\/| | / _ \| |  _| |_| | |_  | |_  | |_| | |  _  
- | |_| | |_| || || |\  |/ ___ \  | |  | |/ ___ \ |_| |  _  |  _| |  _| |  _  | |_| | 
-  \___/ \___/|___|_| \_/_/   \_\ |_|  |_/_/   \_\____|_| |_|_|   |_|   |_| |_|\____| 
+ ██████╗ ██╗   ██╗██╗     ██╗ █████╗     ███╗   ███╗ █████╗  ██████╗ ███╗   ██╗██╗███████╗██╗   ██╗
+██╔═══██╗██║   ██║██║    ██║██╔══██╗    ████╗ ████║██╔══██╗██╔════╝ ████╗  ██║██║██╔════╝╚██╗ ██╔╝
+██║   ██║██║   ██║██║    ██║███████║    ██╔████╔██║███████║██║  ███╗██╔██╗ ██║██║█████╗   ╚████╔╝ 
+██║   ██║██║   ██║██║    ██║██╔══██║    ██║╚██╔╝██║██╔══██║██║   ██║██║╚██╗██║██║██╔══╝    ╚██╔╝  
+╚██████╔╝╚██████╔╝███████╗██║██║  ██║    ██║ ╚═╝ ██║██║  ██║╚██████╔╝██║ ╚████║██║██║        ██║   
+ ╚═════╝  ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═╝    ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝╚═╝        ╚═╝   
 ASCII
-            echo -e "${N}\n" ;;
+            echo -e "\033[0m\n" ;;
         *)
             echo -e "${C}====================================================${N}"
             echo -e "${W}    ${title}${N}"
