@@ -21,13 +21,10 @@ if [ -f "$HOME/.nightworld_vpn_env" ]; then
     source "$HOME/.nightworld_vpn_env"
 fi
 
-# Fungsi untuk membajak semua perintah 'curl' agar otomatis lewat proxy jika VPN aktif
 function curl() {
     if pgrep -x tor >/dev/null 2>&1 || grep -qE "^(TOR|PROXY:)" .vpn_state 2>/dev/null; then
-        # Paksa pakai proxy Tor bawaan Nightworld
         command curl -x socks5h://127.0.0.1:9050 "$@"
     else
-        # Jalan normal jika VPN mati
         command curl "$@"
     fi
 }
@@ -169,9 +166,11 @@ show_menu() {
     echo ""
     echo -e "  \033[1;36m[3]\033[0m  \033[1;37mNetscan\033[0m"
     echo ""
-    echo -e "  \033[1;36m[4]\033[0m  \033[1;37mUser Guide\033[0m"
+    echo -e "  \033[1;36m[4]\033[0m  \033[1;37mOSINT (Coming Soon)\033[0m"
     echo ""
-    echo -e "  \033[1;36m[5]\033[0m  \033[1;37mVPN / Proxy\033[0m"
+    echo -e "  \033[1;36m[5]\033[0m  \033[1;37mUser Guide\033[0m"
+    echo ""
+    echo -e "  \033[1;36m[6]\033[0m  \033[1;37mVPN / Proxy\033[0m"
     echo ""
     echo -e "  \033[1;31m[0]\033[0m  \033[1;37mExit\033[0m"
     echo ""
@@ -268,9 +267,32 @@ menu_exploit() {
     done
 }
 
+menu_osint() {
+    while true; do
+        clear_screen
+        echo -e "${C}  ==================================================${N}"
+        echo -e "${W}    TOOLS HUB ${C}|${W} OSINT (Coming Soon)${N}"
+        echo -e "${C}  ==================================================${N}"
+        echo ""
+        echo -e "  ${Y}[*] This module is currently under development by Tuan.${N}"
+        echo ""
+        echo -e "  \033[1;31m[0]\033[0m  \033[1;37mBack to Main Menu\033[0m"
+        echo ""
+        echo -e "${C}  --------------------------------------------------${N}"
+        echo ""
+        echo -ne "  ${Y}Select menu > ${N}"
+        read -r osint_choice
+
+        case "$osint_choice" in
+            0) return ;;
+            *) echo -e "  ${R}[!] Invalid choice.${N}"; sleep 1 ;;
+        esac
+    done
+}
+
 menu_vpn_entry() {
     if [ ! -f "vpn_module.py" ] && [ ! -f "vpn_module.sh" ]; then
-        echo -e "${C}[*] Mengunduh modul VPN...${N}"
+        echo -e "${C}[*] Downloading VPN module...${N}"
         curl -sL -o vpn_module.py "${MODULE_URL}/vpn_module.py"
         curl -sL -o vpn_module.sh "${MODULE_URL}/vpn_module.sh"
     fi
@@ -280,7 +302,7 @@ menu_vpn_entry() {
     elif [ -f "vpn_module.sh" ]; then
         bash vpn_module.sh
     else
-        echo -e "${R}[!] Modul VPN gagal dimuat.${N}"
+        echo -e "${R}[!] Failed to load VPN module.${N}"
         sleep 2
     fi
 }
@@ -291,7 +313,6 @@ run_tool() {
     
     clear_screen
     
-    # Panggil ASCII Title dari library Tuan
     bxp_ascii_title "$TOOL_NAME"
     
     echo -e "${C}  ==================================================${N}"
@@ -328,13 +349,11 @@ run_tool() {
     echo ""
     sleep 0.5
 
-    # --- PANGGIL BOOT SEQUENCE DARI LIBRARY TUAN ---
     bxp_boot_sequence "$TOOL_NAME"
     
     echo ""
     chmod +x "$FILE_NAME" 2>/dev/null
     
-    # JALANKAN MODUL
     bash "$FILE_NAME"
     MODULE_EXIT=$?
     
@@ -350,11 +369,11 @@ user_guide() {
     clear_screen
     echo -e "${C}  ==================================================${N}"
     echo -e "${W}               USER GUIDE / MANUAL${N}"
-    echo -e "${W}               NIGHT WORLD v2.0${N}"
+    echo -e "${W}               NIGHT WORLD v${VERSION}${N}"
     echo -e "${C}  ==================================================${N}"
     echo ""
     echo -e "  ${Y}[1] INSTALLATION PROCESS${N}"
-    echo -e "    - Select a category (Cyber / Exploit / Netscan)."
+    echo -e "    - Select a category (Cyber / Exploit / Netscan / OSINT)."
     echo -e "    - Choose the desired module."
     echo -e "    - Type 'Y' when prompted to install (only required once)."
     echo -e "    - Wait for the download and boot sequence to complete."
@@ -364,8 +383,13 @@ user_guide() {
     echo -e "    - For Session Bridges (SLEEP PARALYSIS), the listener port is 2015."
     echo -e "    - Ensure these ports are not used by other applications."
     echo ""
-    echo -e "  ${Y}[3] TIPS & TRICKS${N}"
-    echo -e "    - Gunakan menu [5] VPN / Proxy untuk routing traffic."
+    echo -e "  ${Y}[3] OSINT RECONNAISSANCE${N}"
+    echo -e "    - The OSINT module is designed for Open Source Intelligence."
+    echo -e "    - Gather information about targets using public data."
+    echo -e "    - Stay tuned for upcoming OSINT tools in the next update."
+    echo ""
+    echo -e "  ${Y}[4] TIPS & TRICKS${N}"
+    echo -e "    - Use a VPN/Proxy (Menu 6) to secure your connection."
     echo -e "    - Do not close the terminal while a listener is running."
     echo -e "    - Press CTRL+C to stop the listener safely."
     echo ""
@@ -388,8 +412,9 @@ main() {
             1) menu_kill_chain ;;
             2) menu_exploit ;;
             3) menu_netscan ;;
-            4) user_guide ;;
-            5) menu_vpn_entry ;;
+            4) menu_osint ;;
+            5) user_guide ;;
+            6) menu_vpn_entry ;;
             0) echo -e "  ${G}Exiting NIGHT WORLD...${N}"; exit 0 ;;
             *) echo -e "  ${R}[!] Invalid choice.${N}"; sleep 1 ;;
         esac
