@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================
-#   BXP CORE LIBRARY v2.6 (Cinematic + Auto-Dep + Sync Marker)
+#   BXP CORE LIBRARY v2.7 (Cinematic + Auto-Dep + Install Param)
 #   By Bogor X Ploit x Ijul v2.0
 # ============================================
 
@@ -96,19 +96,10 @@ bxp_check_root() {
 # --- 6. BXP BOOT SEQUENCE ENGINE (CINEMATIC) ---
 bxp_boot_sequence() {
     local TOOL_NAME="$1"
+    local IS_FRESH_INSTALL="${2:-0}" # 1 = Baru, 0 = Lama (Sync)
     local START_TIME=$(date +%s%3N)
     local IS_ROOT=0
     local ENV_TYPE="Unknown"
-    
-    # --- FIX SINKRONISASI NAMA MARKER ---
-    # Ngubah "SHADOW LINEAGE" jadi "shadow_lineage" biar sinkron sama nightworld.sh
-    local CLEAN_NAME=$(echo "$TOOL_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
-    local MARKER_FILE=".${CLEAN_NAME}.sh.installed"
-    
-    local IS_NEW_INSTALL=0
-    if [ ! -f "$MARKER_FILE" ]; then
-        IS_NEW_INSTALL=1
-    fi
     
     bxp_require "openssl" "curl" "ping" "awk" "grep"
     
@@ -147,7 +138,7 @@ bxp_boot_sequence() {
     esac
 
     # --- MULAI BOOT SEQUENCE ---
-    if [ "$IS_NEW_INSTALL" -eq 1 ]; then
+    if [ "$IS_FRESH_INSTALL" -eq 1 ]; then
         echo -e "  ${Y}[*] ${msg_install}${N}"
     else
         echo -e "  ${Y}[*] ${msg_sync}${N}"

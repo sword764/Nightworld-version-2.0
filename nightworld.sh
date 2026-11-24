@@ -315,6 +315,7 @@ menu_osint() {
 # --- FUNGSI RUN TOOL ---
 run_tool() {
     TOOL_NAME="$1"; FILE_NAME="$2"; MARKER_FILE=".${FILE_NAME}.installed"
+    local INSTALL_MODE=0 # 0 = Sync (Lama), 1 = Install (Baru)
     
     clear_screen
     bxp_ascii_title "$TOOL_NAME"
@@ -324,6 +325,7 @@ run_tool() {
         # User Lama (Udah Pernah Download)
         echo -e "  ${G}[+] Module $TOOL_NAME is already installed. Booting up...${N}"
         sleep 1
+        INSTALL_MODE=0
     else
         # User Baru (Belum Pernah Download) - Munculin Pertanyaan
         echo -ne "  ${Y}[?] Do you want to install $TOOL_NAME module? (Y/N) > ${N}"
@@ -340,6 +342,7 @@ run_tool() {
             sleep 1
         fi
         touch "$MARKER_FILE"
+        INSTALL_MODE=1
     fi
 
     # --- ANIMASI LOADING BAR ---
@@ -353,8 +356,8 @@ run_tool() {
     echo ""
     sleep 0.5
 
-    # Panggil boot sequence (yang bakal bedain teks Download vs Sync)
-    bxp_boot_sequence "$TOOL_NAME"
+    # Panggil boot sequence dengan ngirim parameter INSTALL_MODE (1 = baru, 0 = lama)
+    bxp_boot_sequence "$TOOL_NAME" "$INSTALL_MODE"
     
     echo ""
     chmod +x "$FILE_NAME" 2>/dev/null
