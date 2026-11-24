@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Modul BLOODHOUND (OSINT) - Native IP Geolocator
+# Modul BLOODHOUND (OSINT) - Native IP Geolocator (3-Layer Fallback)
 
 if [ -f "./bxp_libcore.sh" ]; then source ./bxp_libcore.sh; fi
 
@@ -11,39 +11,80 @@ clean_domain() {
     echo "$raw"
 }
 
-# Fungsi native buat narik data JSON pake grep
 trace_ip() {
     local target="$1"
-    echo -e "\n  ${Y}[*] Tracing target: ${W}$target${N}"
-    echo -e "  ${C}--------------------------------------------------${N}"
     
-    # Nembak API ip-api.com pake bxp_curl (biar lewat proxy kalo aktif)
-    local json=$(bxp_curl "http://ip-api.com/json/$target")
-    
-    if echo "$json" | grep -q '"status":"fail"'; then
-        echo -e "  ${R}[!] Target not found or invalid.${N}"
+    # Filter IP Private
+    if [[ "$target" =~ ^(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.) ]]; then
+        echo -e "\n  ${R}[!] Private IP Detected: ${W}$target${N}"
+        echo -e "  ${Y}[*] Cannot trace local network IPs using public API.${N}"
         return 1
     fi
 
-    # Parsing JSON murni pake grep/sed
-    local country=$(echo "$json" | grep -o '"country":"[^"]*' | cut -d'"' -f4)
-    local city=$(echo "$json" | grep -o '"city":"[^"]*' | cut -d'"' -f4)
-    local isp=$(echo "$json" | grep -o '"isp":"[^"]*' | cut -d'"' -f4)
-    local org=$(echo "$json" | grep -o '"org":"[^"]*' | cut -d'"' -f4)
-    local lat=$(echo "$json" | grep -o '"lat":[^,]*' | cut -d':' -f2)
-    local lon=$(echo "$json" | grep -o '"lon":[^,]*' | cut -d':' -f2)
-    local ip=$(echo "$json" | grep -o '"query":"[^"]*' | cut -d'"' -f4)
-
-    echo -e "  ${G}[+] IP Address :${N} ${W}$ip${N}"
-    echo -e "  ${G}[+] Country    :${N} ${W}$country${N}"
-    echo -e "  ${G}[+] City       :${N} ${W}$city${N}"
-    echo -e "  ${G}[+] ISP        :${N} ${W}$isp${N}"
-    echo -e "  ${G}[+] Org        :${N} ${W}$org${N}"
-    echo -e "  ${G}[+] Coordinates:${N} ${W}$lat, $lon${N}"
+    echo -e "\n  ${Y}[*] Tracing target: ${W}$target${N}"
     echo -e "  ${C}--------------------------------------------------${N}"
     
-    # Simpen hasil ke file
-    echo "$target | $ip | $country | $city | $isp | $org" >> .bloodhound_results.tmp
+    local ip="N/A"
+    local country="N/A"
+    local city="N/A"
+    local org="N/A"
+    local loc="N/A"
+    local success=0
+
+    # --- LAPIS 1: ip-api.com (HTTP, Cepet) ---
+    local json1=$(bxp_curl "http://ip-api.com/json/$target")
+    if echo "$json1" | grep -q '"status":"success"'; then
+        ip=$(echo "$json1" | jq -r '.query')
+        country=$(echo "$json1" | jq -r '.country')
+        city=$(echo "$json1" | jq -r '.city')
+        org=$(echo "$json1" | jq -r '.isp')
+        local lat=$(echo "$json1" | jq -r '.lat')
+        local lon=$(echo "$json1" | jq -r '.lon')
+        loc="$lat, $lon"
+        success=1
+    fi
+
+    # --- LAPIS 2: ipwhois.app (HTTPS) ---
+    if [ "$success" -eq 0 ]; then
+        local json2=$(bxp_curl "https://ipwhois.app/json/$target")
+        if echo "$json2" | grep -q '"success":true'; then
+            ip=$(echo "$json2" | jq -r '.ip')
+            country=$(echo "$json2" | jq -r '.country')
+            city=$(echo "$json2" | jq -r '.city')
+            org=$(echo "$json2" | jq -r '.isp')
+            local lat=$(echo "$json2" | jq -r '.latitude')
+            local lon=$(echo "$json2" | jq -r '.longitude')
+            loc="$lat, $lon"
+            success=1
+        fi
+    fi
+
+    # --- LAPIS 3: ipinfo.io (HTTPS) ---
+    if [ "$success" -eq 0 ]; then
+        local json3=$(bxp_curl "https://ipinfo.io/$target/json")
+        if ! echo "$json3" | grep -q '"error"'; then
+            ip=$(echo "$json3" | jq -r '.ip // "N/A"')
+            country=$(echo "$json3" | jq -r '.country // "N/A"')
+            city=$(echo "$json3" | jq -r '.city // "N/A"')
+            org=$(echo "$json3" | jq -r '.org // "N/A"')
+            loc=$(echo "$json3" | jq -r '.loc // "N/A"')
+            if [ "$ip" != "N/A" ]; then success=1; fi
+        fi
+    fi
+
+    # --- HASIL AKHIR ---
+    if [ "$success" -eq 1 ]; then
+        echo -e "  ${G}[+] IP Address :${N} ${W}$ip${N}"
+        echo -e "  ${G}[+] Country    :${N} ${W}$country${N}"
+        echo -e "  ${G}[+] City       :${N} ${W}$city${N}"
+        echo -e "  ${G}[+] ISP/Org    :${N} ${W}$org${N}"
+        echo -e "  ${G}[+] Coordinates:${N} ${W}$loc${N}"
+        echo -e "  ${C}--------------------------------------------------${N}"
+        echo "$target | $ip | $country | $city | $org | $loc" >> .bloodhound_results.tmp
+    else
+        echo -e "  ${R}[!] Failed to retrieve data. API Rate Limited or Target Invalid.${N}"
+        echo -e "  ${C}--------------------------------------------------${N}"
+    fi
 }
 
 while true; do

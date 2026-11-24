@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ============================================
-#   BXP CORE LIBRARY v2.9 (Cinematic + Auto-Dep + Scroll Fix)
+#   BXP CORE LIBRARY v3.0 (Cinematic + Auto-Dep + jq)
 #   By Bogor X Ploit x Ijul v2.0
 # ============================================
 
 export C='\033[0;36m'; export B='\033[0;34m'; export W='\033[1;37m'
 export R='\033[0;31m'; export Y='\033[1;33m'; export G='\033[0;32m'; export N='\033[0m'
 
-# --- 0. AUTO-INSTALL ENGINE ---
+# --- 0. AUTO-INSTALL ENGINE (PATCH IJUL) ---
 bxp_require() {
     local cmds=("$@")
     local missing=()
@@ -20,6 +20,7 @@ bxp_require() {
 
     if [ ${#missing[@]} -eq 0 ]; then return 0; fi
 
+    # Install diam-diam tanpa nampilin error
     if [ -n "$PREFIX" ] && echo "$PREFIX" | grep -qi "com.termux"; then
         pkg update -y >/dev/null 2>&1
         for pkg in "${missing[@]}"; do
@@ -45,7 +46,7 @@ bxp_curl() {
     if [ -f "$HOME/.vpn_state" ] || [ -f "./.vpn_state" ] || pgrep -x tor >/dev/null 2>&1; then
         command curl -s -x socks5h://127.0.0.1:9050 "$@"
     else
-        command curl "$@"
+        command curl -s "$@"
     fi
 }
 
@@ -101,7 +102,8 @@ bxp_boot_sequence() {
     local IS_ROOT=0
     local ENV_TYPE="Unknown"
     
-    bxp_require "openssl" "curl" "ping" "awk" "grep"
+    # Tambahin jq ke dependency
+    bxp_require "openssl" "curl" "ping" "awk" "grep" "jq"
     
     if [ "$(id -u)" -eq 0 ]; then IS_ROOT=1
     elif command -v su >/dev/null 2>&1 && timeout 3 su -c id >/dev/null 2>&1; then IS_ROOT=1
