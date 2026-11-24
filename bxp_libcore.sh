@@ -1,18 +1,31 @@
 #!/usr/bin/env bash
 # ============================================
-#   BXP CORE LIBRARY v2.2 (Smart Device Adaptive)
-#   By Bogor X Ploit x Ijul v5.0
+#   BXP CORE LIBRARY v2.3 (Smart Adaptive + Proxy Interceptor)
+#   By Bogor X Ploit x Ijul v2.0
 # ============================================
 
 export C='\033[0;36m'; export B='\033[0;34m'; export W='\033[1;37m'
 export R='\033[0;31m'; export Y='\033[1;33m'; export G='\033[0;32m'; export N='\033[0m'
+
+# --- 0. PROXY INTERCEPTOR ENGINE (PATCH IJUL) ---
+# Fungsi ini ngecek apakah VPN aktif, kalo iya, paksa curl lewat proxy
+bxp_curl() {
+    if [ -f "$HOME/.vpn_state" ] || [ -f "./.vpn_state" ] || pgrep -x tor >/dev/null 2>&1; then
+        # Pake flag -x biar kebal dari isu curl ignore env di Arch/BlackArch
+        command curl -s -x socks5h://127.0.0.1:9050 "$@"
+    else
+        # Normal
+        command curl "$@"
+    fi
+}
 
 # --- 1. Network Engine ---
 bxp_http_request() {
     local url="$1"; local payload="$2"
     local user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) BXP-Engine/2.0"
     local response_time
-    response_time=$(curl -s -A "$user_agent" --max-time 5 -o /dev/null -w "%{time_total}" "${url}${payload}" 2>/dev/null)
+    # Ganti curl jadi bxp_curl biar kena VPN
+    response_time=$(bxp_curl -A "$user_agent" --max-time 5 -o /dev/null -w "%{time_total}" "${url}${payload}" 2>/dev/null)
     if [ -z "$response_time" ] || [ "$response_time" = "0.000000" ]; then
         echo "TIMEOUT/ERROR"
     else
@@ -51,7 +64,7 @@ bxp_check_root() {
     fi
 }
 
-# --- 5. BXP BOOT SEQUENCE ENGINE (SMART ADAPTIVE CHECK + AUTO DEP) ---
+# --- 5. BXP BOOT SEQUENCE ENGINE ---
 bxp_ensure_deps() {
     local deps=("openssl" "curl" "ping" "awk" "grep")
     local missing=()
@@ -81,7 +94,6 @@ bxp_boot_sequence() {
     local IS_ROOT=0
     local ENV_TYPE="Unknown"
     
-    # --- JALANIN AUTO-INSTALLER DULU ---
     bxp_ensure_deps
     
     if [ "$(id -u)" -eq 0 ]; then IS_ROOT=1
@@ -93,48 +105,26 @@ bxp_boot_sequence() {
     bxp_step_sleep() { sleep "${BXP_SLEEP_FAST:-0.15}"; }
     bxp_step_sleep_slow() { sleep "${BXP_SLEEP_SLOW:-0.45}"; }
 
-    # --- TEKS DINAMIS PER TOOL ---
+    # Teks Dinamis per Tool
     case "$TOOL_NAME" in
         "EXHUME DISGUISE")
-            local msg1="Preparing stealth layer..."
-            local msg2="Hiding process tracks..."
-            local msg3="Bypassing network monitor..."
-            ;;
+            local msg1="Preparing stealth layer..."; local msg2="Hiding process tracks..."; local msg3="Bypassing network monitor..." ;;
         "CHOKE THE HUNTERS")
-            local msg1="Initializing packet interceptor..."
-            local msg2="Throttling connection..."
-            local msg3="Dropping suspicious packets..."
-            ;;
+            local msg1="Initializing packet interceptor..."; local msg2="Throttling connection..."; local msg3="Dropping suspicious packets..." ;;
         "RECLAIM CATCH")
-            local msg1="Entering promiscuous mode..."
-            local msg2="Sniffing mid-air packets..."
-            local msg3="Extracting raw data..."
-            ;;
+            local msg1="Entering promiscuous mode..."; local msg2="Sniffing mid-air packets..."; local msg3="Extracting raw data..." ;;
         "OUIJA MAGNIFYING")
-            local msg1="Calibrating magnifying lens..."
-            local msg2="Scanning hidden frequencies..."
-            local msg3="Rendering network map..."
-            ;;
+            local msg1="Calibrating magnifying lens..."; local msg2="Scanning hidden frequencies..."; local msg3="Rendering network map..." ;;
         "NYCTOPHOBIA")
-            local msg1="Hooking session listener..."
-            local msg2="Binding port 2010..."
-            local msg3="Awaiting dark connections..."
-            ;;
+            local msg1="Hooking session listener..."; local msg2="Binding port 2010..."; local msg3="Awaiting dark connections..." ;;
         *)
-            local msg1="Synchronizing protocols preparing runtime..."
-            local msg2="Initializing core processes..."
-            local msg3="Loading cryptographic engine..."
-            ;;
+            local msg1="Synchronizing protocols preparing runtime..."; local msg2="Initializing core processes..."; local msg3="Loading cryptographic engine..." ;;
     esac
 
-    # --- MULAI PROSES LOADING TEKS ---
-    echo -e "  ${Y}[*] ${msg1}${N}"
-    bxp_step_sleep_slow
-    echo -e "  ${G}[ OK ]${N} bash version: ${BASH_VERSION}"
-    bxp_step_sleep
+    echo -e "  ${Y}[*] ${msg1}${N}"; bxp_step_sleep_slow
+    echo -e "  ${G}[ OK ]${N} bash version: ${BASH_VERSION}"; bxp_step_sleep
     
-    echo -ne "  ${Y}[*] Checking privilege level...${N}"
-    bxp_step_sleep
+    echo -ne "  ${Y}[*] Checking privilege level...${N}"; bxp_step_sleep
     if [ "$IS_ROOT" -eq 1 ]; then
         if [ "$ENV_TYPE" = "Termux" ]; then echo -e " ${G}[ ROOT - Android ]${N}"; else echo -e " ${G}[ ROOT - PC ]${N}"; fi
     else
@@ -143,84 +133,63 @@ bxp_boot_sequence() {
 
     if [ "$IS_ROOT" -eq 1 ]; then
         if [ "$ENV_TYPE" = "Termux" ]; then
-            echo -ne "  ${Y}[*] Querying SELinux status...${N}"
-            bxp_step_sleep
+            echo -ne "  ${Y}[*] Querying SELinux status...${N}"; bxp_step_sleep
             if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce)" = "Enforcing" ]; then echo -e " ${Y}[ WARN ] Enforcing${N}"; else echo -e " ${G}[ OK ] Permissive/Disabled${N}"; fi
         else
-            echo -ne "  ${Y}[*] Checking System Firewall...${N}"
-            bxp_step_sleep
+            echo -ne "  ${Y}[*] Checking System Firewall...${N}"; bxp_step_sleep
             if command -v ufw >/dev/null 2>&1; then echo -e " ${G}[ OK ] UFW Detected${N}"; else echo -e " ${Y}[ WARN ] No UFW Found${N}"; fi
         fi
     else
-        echo -ne "  ${Y}[*] Checking monitor mode capability...${N}"
-        bxp_step_sleep
+        echo -ne "  ${Y}[*] Checking monitor mode capability...${N}"; bxp_step_sleep
         if command -v iw >/dev/null 2>&1 && iw dev 2>/dev/null | grep -q "monitor"; then echo -e " ${G}[ OK ] Supported${N}"; else echo -e " ${R}[ FAIL ] Not Supported${N}"; fi
     fi
 
-    echo -ne "  ${Y}[*] ${msg3}...${N}"
-    bxp_step_sleep
-    if command -v openssl >/dev/null 2>&1 || type -P openssl >/dev/null 2>&1; then 
-        echo -e " ${G}[ OK ]${N}"
-    else 
-        echo -e " ${R}[ NOT FOUND ] fallback bash${N}"
-    fi
+    echo -ne "  ${Y}[*] ${msg3}...${N}"; bxp_step_sleep
+    if command -v openssl >/dev/null 2>&1 || type -P openssl >/dev/null 2>&1; then echo -e " ${G}[ OK ]${N}"; else echo -e " ${R}[ NOT FOUND ] fallback bash${N}"; fi
 
-    echo -ne "  ${Y}[*] Verifying proxy configuration...${N}"
-    bxp_step_sleep
-    if [ -n "$http_proxy" ] || [ -n "$https_proxy" ]; then echo -e " ${G}[ OK ] Detected${N}"; else echo -e " ${Y}[ NOT SET ] Direct Connection${N}"; fi
+    echo -ne "  ${Y}[*] Verifying proxy configuration...${N}"; bxp_step_sleep
+    if [ -n "$http_proxy" ] || [ -n "$https_proxy" ] || [ -f "$HOME/.vpn_state" ]; then echo -e " ${G}[ OK ] Detected${N}"; else echo -e " ${Y}[ NOT SET ] Direct Connection${N}"; fi
 
-    echo -ne "  ${Y}[*] Verifying storage permissions...${N}"
-    bxp_step_sleep
+    echo -ne "  ${Y}[*] Verifying storage permissions...${N}"; bxp_step_sleep
     if [ "$ENV_TYPE" = "Termux" ]; then
         if [ -d "/sdcard" ] && [ -r "/sdcard" ]; then echo -e " ${G}[ OK ] /sdcard writable${N}"; else echo -e " ${R}[ DENIED ] Run termux-setup-storage${N}"; fi
     else
         if [ -w "$HOME" ]; then echo -e " ${G}[ OK ] Home directory writable${N}"; else echo -e " ${R}[ DENIED ] No write access${N}"; fi
     fi
 
-    echo -ne "  ${Y}[*] ${msg2}...${N}"
-    bxp_step_sleep
+    echo -ne "  ${Y}[*] ${msg2}...${N}"; bxp_step_sleep
     if [ -f /proc/meminfo ]; then
-        MEM_AVAIL=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
-        MEM_MB=$((MEM_AVAIL / 1024))
+        MEM_AVAIL=$(grep MemAvailable /proc/meminfo | awk '{print $2}'); MEM_MB=$((MEM_AVAIL / 1024))
         echo -e " ${G}[ OK ] ${MEM_MB} MB Available${N}"
     else
         echo -e " ${Y}[ WARN ] Cannot read memory info${N}"
     fi
 
-    echo -ne "  ${Y}[*] Pinging 8.8.8.8 ...${N}"
-    bxp_step_sleep
+    echo -ne "  ${Y}[*] Pinging 8.8.8.8 ...${N}"; bxp_step_sleep
     local PING_START=$(date +%s%3N)
     if ping -c 4 -W 2 8.8.8.8 >/dev/null 2>&1; then
-        local PING_END=$(date +%s%3N)
-        local PING_TIME=$((PING_END - PING_START))
+        local PING_END=$(date +%s%3N); local PING_TIME=$((PING_END - PING_START))
         echo -e " ${G}[ OK ] Connected (${PING_TIME}ms)${N}"
     else
         echo -e " ${R}[ FAIL ] Network Offline${N}"
     fi
 
-    echo -ne "  ${Y}[*] Initializing core processes...${N}"
-    bxp_step_sleep
+    echo -ne "  ${Y}[*] Initializing core processes...${N}"; bxp_step_sleep
     PROC_COUNT=$(ps -A 2>/dev/null | wc -l)
     echo -e " ${G}[ OK ] ${PROC_COUNT} active PIDs${N}"
 
-    local END_TIME=$(date +%s%3N)
-    local ELAPSED=$((END_TIME - START_TIME))
+    local END_TIME=$(date +%s%3N); local ELAPSED=$((END_TIME - START_TIME))
     
-    echo -e "  ${G}[ SUCCESS ]${N} LAUNCHING ${W}${TOOL_NAME}${N}"
-    bxp_step_sleep_slow
+    echo -e "  ${G}[ SUCCESS ]${N} LAUNCHING ${W}${TOOL_NAME}${N}"; bxp_step_sleep_slow
     echo -e "  ${G}[+] Module ready. (${ELAPSED}ms)${N}"
 }
 
 # --- 6. HEADER ASCII ENGINE ---
 bxp_ascii_title() {
-    local title="$1"
-    clear
-    sleep 0.2
-    
+    local title="$1"; clear; sleep 0.2
     case "$title" in
         "NYCTOPHOBIA")
-            echo -e "\033[38;2;0;255;255m" # Cyan
-            cat <<'ASCII'
+            echo -e "\033[38;2;0;255;255m"; cat <<'ASCII'
  _   _  __   __  ____  _____  ___   ____   _   _   ___   ____  ___   _    
 | \ | | \ \ / / / ___||_   _|/ _ \ |  _ \ | | | | / _ \ | __ )|_ _| / \   
 |  \| |  \ V / | |      | | | | | || |_) || |_| || | | ||  _ \ | | / _ \  
@@ -229,8 +198,7 @@ bxp_ascii_title() {
 ASCII
             echo -e "\033[0m\n" ;;
         "SLEEP PARALYSIS")
-            echo -e "\033[38;2;255;0;0m" # Merah
-            cat <<'ASCII'
+            echo -e "\033[38;2;255;0;0m"; cat <<'ASCII'
  ____  _      ____  ____  ____    ____    _    ____  _      __   __  ___  ____  
 / ___|| |    | ____|  _ \|  _ \  |  _ \  / \  |  _ \| |     \ \ / / / _ \|  _ \ 
 \___ \| |    |  _| | |_) | |_) | | |_) |/ _ \ | |_) | |      \ V / | | | | |_) |
@@ -239,8 +207,7 @@ ASCII
 ASCII
             echo -e "\033[0m\n" ;;
         "NOCTURNAL DECAY")
-            echo -e "\033[38;2;255;215;0m" # Emas
-            cat <<'ASCII'
+            echo -e "\033[38;2;255;215;0m"; cat <<'ASCII'
  _   _  ____   ____  _____  _   _  ____    _     ____    ____   ____   _   __   __
 | \ | |/ __ \ / ___||_   _|| | | ||  _ \  / \   |  _ \  |  _ \ / ___| / \  \ \ / /
 |  \| | |  | | |      | |  | | | || |_) |/ _ \  | | | | | |_) | |    / _ \  \ V / 
@@ -249,8 +216,7 @@ ASCII
 ASCII
             echo -e "\033[0m\n" ;;
         "CYBER ATTACK")
-            echo -e "\033[38;2;0;255;255m" # Cyan
-            cat <<'ASCII'
+            echo -e "\033[38;2;0;255;255m"; cat <<'ASCII'
   ██████╗██╗   ██╗██████╗ ███████╗██████╗     █████╗ ████████╗████████╗ █████╗  ██████╗██╗  ██╗
  ██╔════╝╚██╗ ██╔╝██╔══██╗██╔════╝██╔══██╗   ██╔══██╗╚══██╔══╝╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝
  ██║      ╚████╔╝ ██████╔╝█████╗  ██████╔╝   ███████║   ██║      ██║   ███████║██║     █████╔╝ 
@@ -260,8 +226,7 @@ ASCII
 ASCII
             echo -e "\033[0m\n" ;;
         "EXHUME DISGUISE")
-            echo -e "\033[38;2;255;0;0m" # MERAH (Sesuai nightworld.sh)
-            cat <<'ASCII'
+            echo -e "\033[38;2;255;0;0m"; cat <<'ASCII'
 ███████╗██╗  ██╗██╗  ██╗██╗   ██╗███╗   ███╗███████╗    ██████╗ ██╗███████╗ ██████╗ ██╗   ██╗██╗███████╗███████╗
 ██╔════╝╚██╗██╔╝██║  ██║██║   ██║████╗ ████║██╔════╝    ██╔══██╗██║██╔════╝██╔════╝ ██║   ██║██║██╔════╝██╔════╝
 █████╗   ╚███╔╝ ███████║██║   ██║██╔████╔██║█████╗      ██║  ██║██║███████╗██║  ███╗██║   ██║██║███████╗█████╗  
@@ -271,8 +236,7 @@ ASCII
 ASCII
             echo -e "\033[0m\n" ;;
         "CHOKE THE HUNTERS")
-            echo -e "\033[38;2;255;215;0m" # EMAS (Sesuai nightworld.sh)
-            cat <<'ASCII'
+            echo -e "\033[38;2;255;215;0m"; cat <<'ASCII'
 ██████╗██╗  ██╗ ██████╗ ██╗  ██╗███████╗    ████████╗██╗  ██╗███████╗    ██╗  ██╗██╗   ██╗███╗   ██╗████████╗███████╗██████╗ ███████╗
 ██╔════╝██║  ██║██╔═══██╗██║ ██╔╝██╔════╝    ╚══██╔══╝██║  ██║██╔════╝    ██║  ██║██║   ██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗██╔════╝
 ██║     ███████║██║   ██║█████╔╝ █████╗         ██║   ███████║█████╗      ███████║██║   ██║██╔██╗ ██║   ██║   █████╗  ██████╔╝███████╗
@@ -282,8 +246,7 @@ ASCII
 ASCII
             echo -e "\033[0m\n" ;;
         "RECLAIM CATCH")
-            echo -e "\033[38;2;148;0;211m" # UNGU (Sesuai nightworld.sh)
-            cat <<'ASCII'
+            echo -e "\033[38;2;148;0;211m"; cat <<'ASCII'
 ██████╗ ███████╗ ██████╗██╗      █████╗ ██╗███╗   ███╗     ██████╗ █████╗ ████████╗ ██████╗██╗  ██╗
 ██╔══██╗██╔════╝██╔════╝██║     ██╔══██╗██║████╗ ████║    ██╔════╝██╔══██╗╚══██╔══╝██╔════╝██║  ██║
 ██████╔╝█████╗  ██║     ██║     ███████║██║██╔████╔██║    ██║     ███████║   ██║   ██║     ███████║
@@ -293,8 +256,7 @@ ASCII
 ASCII
             echo -e "\033[0m\n" ;;
         "OUIJA MAGNIFYING")
-            echo -e "\033[38;2;0;255;255m" # CYAN (Sesuai nightworld.sh)
-            cat <<'ASCII'
+            echo -e "\033[38;2;0;255;255m"; cat <<'ASCII'
  ██████╗ ██╗   ██╗██╗     ██╗ █████╗     ███╗   ███╗ █████╗  ██████╗ ███╗   ██╗██╗███████╗██╗   ██╗
 ██╔═══██╗██║   ██║██║    ██║██╔══██╗    ████╗ ████║██╔══██╗██╔════╝ ████╗  ██║██║██╔════╝╚██╗ ██╔╝
 ██║   ██║██║   ██║██║    ██║███████║    ██╔████╔██║███████║██║  ███╗██╔██╗ ██║██║█████╗   ╚████╔╝ 

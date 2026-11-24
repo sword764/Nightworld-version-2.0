@@ -16,10 +16,23 @@ if [ ! -f "bxp_libcore.sh" ]; then
 fi
 source ./bxp_libcore.sh
 
-# --- LOAD VPN ENVIRONMENT (PATCH Ijul) ---
+# --- LOAD VPN ENVIRONMENT & AUTO-HIJACK CURL (PATCH IJUL) ---
 if [ -f "$HOME/.nightworld_vpn_env" ]; then
     source "$HOME/.nightworld_vpn_env"
 fi
+
+# Fungsi untuk membajak semua perintah 'curl' agar otomatis lewat proxy jika VPN aktif
+function curl() {
+    if pgrep -x tor >/dev/null 2>&1 || grep -qE "^(TOR|PROXY:)" .vpn_state 2>/dev/null; then
+        # Paksa pakai proxy Tor bawaan Nightworld
+        command curl -x socks5h://127.0.0.1:9050 "$@"
+    else
+        # Jalan normal jika VPN mati
+        command curl "$@"
+    fi
+}
+export -f curl
+# -----------------------------------------------------------
 
 if ! command -v bxp_ascii_title >/dev/null 2>&1; then
     C='\033[0;36m'; N='\033[0m'
@@ -278,7 +291,7 @@ run_tool() {
     
     clear_screen
     
-    # Panggil ASCII Title dari library Tuan (Warna udah dihandle di bxp_libcore.sh)
+    # Panggil ASCII Title dari library Tuan
     bxp_ascii_title "$TOOL_NAME"
     
     echo -e "${C}  ==================================================${N}"
