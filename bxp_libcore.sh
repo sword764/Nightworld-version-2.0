@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ============================================
-#   BXP CORE LIBRARY v2.8 (Cinematic + Auto-Dep + Scroll Fix)
+#   BXP CORE LIBRARY v2.9 (Cinematic + Auto-Dep + Scroll Fix)
 #   By Bogor X Ploit x Ijul v2.0
 # ============================================
 
 export C='\033[0;36m'; export B='\033[0;34m'; export W='\033[1;37m'
 export R='\033[0;31m'; export Y='\033[1;33m'; export G='\033[0;32m'; export N='\033[0m'
 
-# --- 0. AUTO-INSTALL ENGINE (PATCH IJUL) ---
+# --- 0. AUTO-INSTALL ENGINE ---
 bxp_require() {
     local cmds=("$@")
     local missing=()
@@ -96,7 +96,7 @@ bxp_check_root() {
 # --- 6. BXP BOOT SEQUENCE ENGINE (CINEMATIC) ---
 bxp_boot_sequence() {
     local TOOL_NAME="$1"
-    local IS_FRESH_INSTALL="${2:-0}" # 1 = Baru, 0 = Lama (Sync)
+    local IS_FRESH_INSTALL="${2:-0}"
     local START_TIME=$(date +%s%3N)
     local IS_ROOT=0
     local ENV_TYPE="Unknown"
@@ -112,7 +112,6 @@ bxp_boot_sequence() {
     bxp_step_sleep() { sleep "${BXP_SLEEP_FAST:-0.15}"; }
     bxp_step_sleep_slow() { sleep "${BXP_SLEEP_SLOW:-0.45}"; }
 
-    # Teks Dinamis
     local msg_install="Downloading required modules..."
     local msg_sync="Synchronizing runtime protocols..."
     local msg_stealth="Preparing stealth layer..."
@@ -126,6 +125,10 @@ bxp_boot_sequence() {
         "PULSE CHECK")
             msg_stealth="Calibrating pulse sensor..."
             msg_track="Mapping TCP socket routes..."
+            ;;
+        "BLOODHOUND")
+            msg_stealth="Releasing the hound..."
+            msg_track="Sniffing target coordinates..."
             ;;
         "EXHUME DISGUISE")
             msg_stealth="Applying stealth disguise..."
@@ -141,7 +144,6 @@ bxp_boot_sequence() {
             ;;
     esac
 
-    # --- MULAI BOOT SEQUENCE ---
     if [ "$IS_FRESH_INSTALL" -eq 1 ]; then
         echo -e "  ${Y}[*] ${msg_install}${N}"
     else
@@ -149,12 +151,10 @@ bxp_boot_sequence() {
     fi
     bxp_step_sleep_slow
     
-    # Versi Bash (Dipotong -release)
     local BASH_VER=$(echo "$BASH_VERSION" | cut -d'(' -f1)
     echo -e "  ${G}[ OK ]${N} bash version: ${BASH_VER}"
     bxp_step_sleep
     
-    # Root Check
     echo -ne "  ${Y}[*] Checking privilege level...${N}"; bxp_step_sleep
     if [ "$IS_ROOT" -eq 1 ]; then
         if [ "$ENV_TYPE" = "Termux" ]; then echo -e " ${G}[ ROOT - Android ]${N}"; else echo -e " ${G}[ ROOT - PC ]${N}"; fi
@@ -162,7 +162,6 @@ bxp_boot_sequence() {
         echo -e " ${R}[ NON-ROOT ]${N}"
     fi
 
-    # Monitor / SELinux / Firewall
     if [ "$IS_ROOT" -eq 1 ]; then
         if [ "$ENV_TYPE" = "Termux" ]; then
             echo -ne "  ${Y}[*] Querying SELinux status...${N}"; bxp_step_sleep
@@ -176,11 +175,9 @@ bxp_boot_sequence() {
         if command -v iw >/dev/null 2>&1 && iw dev 2>/dev/null | grep -q "monitor"; then echo -e " ${G}[ OK ] Supported${N}"; else echo -e " ${Y}[ WARN ] Hardware Limitation${N}"; fi
     fi
 
-    # Crypto Engine (Dipaksa OK biar cinematic)
     echo -ne "  ${Y}[*] Verifying cryptographic engine...${N}"; bxp_step_sleep
     echo -e " ${G}[ OK ] Synchronized${N}"
     
-    # Proxy Config
     echo -ne "  ${Y}[*] Verifying proxy configuration...${N}"; bxp_step_sleep
     if [ -n "$http_proxy" ] || [ -n "$https_proxy" ] || [ -f "$HOME/.vpn_state" ]; then 
         echo -e " ${G}[ OK ] Detected${N}"
@@ -188,7 +185,6 @@ bxp_boot_sequence() {
         echo -e " ${Y}[ WARN ] Direct Connection${N}"
     fi
 
-    # Storage
     echo -ne "  ${Y}[*] Verifying storage permissions...${N}"; bxp_step_sleep
     if [ "$ENV_TYPE" = "Termux" ]; then
         if [ -d "/sdcard" ] && [ -r "/sdcard" ]; then echo -e " ${G}[ OK ] /sdcard writable${N}"; else echo -e " ${R}[ DENIED ] Run termux-setup-storage${N}"; fi
@@ -196,11 +192,9 @@ bxp_boot_sequence() {
         if [ -w "$HOME" ]; then echo -e " ${G}[ OK ] Home directory writable${N}"; else echo -e " ${R}[ DENIED ] No write access${N}"; fi
     fi
 
-    # Custom Teks (Tengah)
     echo -ne "  ${Y}[*] ${msg_stealth}${N}"; bxp_step_sleep
     echo -e " ${G}[ OK ]${N}"
 
-    # Memory
     echo -ne "  ${Y}[*] Allocating memory...${N}"; bxp_step_sleep
     if [ -f /proc/meminfo ]; then
         MEM_AVAIL=$(grep MemAvailable /proc/meminfo | awk '{print $2}'); MEM_MB=$((MEM_AVAIL / 1024))
@@ -209,7 +203,6 @@ bxp_boot_sequence() {
         echo -e " ${Y}[ WARN ] Limited${N}"
     fi
 
-    # Ping
     echo -ne "  ${Y}[*] Pinging 8.8.8.8 ...${N}"; bxp_step_sleep
     local PING_START=$(date +%s%3N)
     if ping -c 4 -W 2 8.8.8.8 >/dev/null 2>&1; then
@@ -219,12 +212,10 @@ bxp_boot_sequence() {
         echo -e " ${R}[ FAIL ] Offline${N}"
     fi
 
-    # PID
     echo -ne "  ${Y}[*] Initializing core processes...${N}"; bxp_step_sleep
     PROC_COUNT=$(ps -A 2>/dev/null | wc -l)
     echo -e " ${G}[ OK ] ${PROC_COUNT} PIDs${N}"
 
-    # Custom Teks (Akhir)
     echo -ne "  ${Y}[*] ${msg_track}${N}"; bxp_step_sleep
     echo -e " ${G}[ OK ]${N}"
 
@@ -316,7 +307,6 @@ ASCII
 ASCII
             echo -e "\033[0m\n" ;;
         "SHADOW LINEAGE")
-            # Warna Hijau Neon (RGB: 57;255;20)
             echo -e "\033[38;2;57;255;20m"; cat <<'ASCII'
 ███████╗██╗  ██╗ █████╗ ██████╗  ██████╗ ██╗    ██╗    ██╗     ██╗███╗   ██╗███████╗ █████╗  ██████╗ ███████╗
 ██╔════╝██║  ██║██╔══██╗██╔══██╗██╔═══██╗██║    ██║    ██║     ██║████╗  ██║██╔════╝██╔══██╗██╔════╝ ██╔════╝
@@ -327,7 +317,6 @@ ASCII
 ASCII
             echo -e "\033[0m\n" ;;
         "PULSE CHECK")
-            # Warna Biru Elektrik (RGB: 0;191;255)
             echo -e "\033[38;2;0;191;255m"; cat <<'ASCII'
 ██████╗ ██╗   ██╗██╗     ███████╗███████╗     ██████╗██╗  ██╗███████╗ ██████╗██╗  ██╗
 ██╔══██╗██║   ██║██║     ██╔════╝██╔════╝    ██╔════╝██║  ██║██╔════╝██╔════╝██║ ██╔╝
@@ -335,6 +324,16 @@ ASCII
 ██╔═══╝ ██║   ██║██║     ╚════██║██╔══╝      ██║     ██╔══██║██╔══╝  ██║     ██╔═██╗ 
 ██║     ╚██████╔╝███████╗███████║███████╗    ╚██████╗██║  ██║███████╗╚██████╗██║  ██╗
 ╚═╝      ╚═════╝ ╚══════╝╚══════╝╚══════╝     ╚═════╝╚═╝  ╚═╝╚══════╝ ╚═════╝╚═╝  ╚═╝
+ASCII
+            echo -e "\033[0m\n" ;;
+        "BLOODHOUND")
+            echo -e "\033[38;2;0;120;255m"; cat <<'ASCII'
+██████╗ ██╗      ██████╗  ██████╗ ██████╗ ██╗  ██╗ ██████╗ ██╗   ██╗███╗   ██╗██████╗ 
+██╔══██╗██║     ██╔═══██╗██╔═══██╗██╔══██╗██║  ██║██╔═══██╗██║   ██║████╗  ██║██╔══██╗
+██████╔╝██║     ██║   ██║██║   ██║██║  ██║███████║██║   ██║██║   ██║██╔██╗ ██║██║  ██║
+██╔══██╗██║     ██║   ██║██║   ██║██║  ██║██╔══██║██║   ██║██║   ██║██║╚██╗██║██║  ██║
+██████╔╝███████╗╚██████╔╝╚██████╔╝██████╔╝██║  ██║╚██████╔╝╚██████╔╝██║ ╚████║██████╔╝
+╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝╚═════╝ 
 ASCII
             echo -e "\033[0m\n" ;;
         *)
