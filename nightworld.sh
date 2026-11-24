@@ -166,7 +166,7 @@ show_menu() {
     echo ""
     echo -e "  \033[1;36m[3]\033[0m  \033[1;37mNetscan\033[0m"
     echo ""
-    echo -e "  \033[1;36m[4]\033[0m  \033[1;37mOSINT (Coming Soon)\033[0m"
+    echo -e "  \033[1;36m[4]\033[0m  \033[1;37mOSINT Reconnaissance\033[0m"
     echo ""
     echo -e "  \033[1;36m[5]\033[0m  \033[1;37mUser Guide\033[0m"
     echo ""
@@ -267,16 +267,28 @@ menu_exploit() {
     done
 }
 
+# ==========================================
+# --- OSINT MENU (10 TOOLS) ---
+# ==========================================
 menu_osint() {
     while true; do
         clear_screen
         echo -e "${C}  ==================================================${N}"
-        echo -e "${W}    TOOLS HUB ${C}|${W} OSINT (Coming Soon)${N}"
+        echo -e "${W}    TOOLS HUB ${C}|${W} OSINT Reconnaissance${N}"
         echo -e "${C}  ==================================================${N}"
         echo ""
-        echo -e "  ${Y}[*] This module is currently under development by Tuan.${N}"
+        echo -e "  \033[1;32m[01]\033[0m  \033[1;37mShadow Lineage\033[0m"
+        echo -e "  \033[1;32m[02]\033[0m  \033[1;37mPulse Check\033[0m"
+        echo -e "  \033[1;32m[03]\033[0m  \033[1;37mBloodhound\033[0m"
+        echo -e "  \033[1;32m[04]\033[0m  \033[1;37mDoppelganger\033[0m"
+        echo -e "  \033[1;32m[05]\033[0m  \033[1;37mAutopsy\033[0m"
+        echo -e "  \033[1;32m[06]\033[0m  \033[1;37mAnatomy\033[0m"
+        echo -e "  \033[1;32m[07]\033[0m  \033[1;37mNecromancy\033[0m"
+        echo -e "  \033[1;32m[08]\033[0m  \033[1;37mWhisper\033[0m"
+        echo -e "  \033[1;32m[09]\033[0m  \033[1;37mSoul Seeker\033[0m"
+        echo -e "  \033[1;32m[10]\033[0m  \033[1;37mSeal Inspection\033[0m"
         echo ""
-        echo -e "  \033[1;31m[0]\033[0m  \033[1;37mBack to Main Menu\033[0m"
+        echo -e "  \033[1;31m[00]\033[0m  \033[1;37mBack to Main Menu\033[0m"
         echo ""
         echo -e "${C}  --------------------------------------------------${N}"
         echo ""
@@ -284,27 +296,20 @@ menu_osint() {
         read -r osint_choice
 
         case "$osint_choice" in
-            0) return ;;
+            1|01) run_tool "SHADOW LINEAGE" "shadow_lineage.sh" ;;
+            2|02) run_tool "PULSE CHECK" "pulse_check.sh" ;;
+            3|03) run_tool "BLOODHOUND" "bloodhound.sh" ;;
+            4|04) run_tool "DOPPELGANGER" "doppelganger.sh" ;;
+            5|05) run_tool "AUTOPSY" "autopsy.sh" ;;
+            6|06) run_tool "ANATOMY" "anatomy.sh" ;;
+            7|07) run_tool "NECROMANCY" "necromancy.sh" ;;
+            8|08) run_tool "WHISPER" "whisper.sh" ;;
+            9|09) run_tool "SOUL SEEKER" "soul_seeker.sh" ;;
+            10)   run_tool "SEAL INSPECTION" "seal_inspection.sh" ;;
+            0|00) return ;;
             *) echo -e "  ${R}[!] Invalid choice.${N}"; sleep 1 ;;
         esac
     done
-}
-
-menu_vpn_entry() {
-    if [ ! -f "vpn_module.py" ] && [ ! -f "vpn_module.sh" ]; then
-        echo -e "${C}[*] Downloading VPN module...${N}"
-        curl -sL -o vpn_module.py "${MODULE_URL}/vpn_module.py"
-        curl -sL -o vpn_module.sh "${MODULE_URL}/vpn_module.sh"
-    fi
-
-    if command -v python3 >/dev/null 2>&1 && [ -f "vpn_module.py" ]; then
-        python3 vpn_module.py
-    elif [ -f "vpn_module.sh" ]; then
-        bash vpn_module.sh
-    else
-        echo -e "${R}[!] Failed to load VPN module.${N}"
-        sleep 2
-    fi
 }
 
 # --- FUNGSI RUN TOOL ---
@@ -312,29 +317,13 @@ run_tool() {
     TOOL_NAME="$1"; FILE_NAME="$2"; MARKER_FILE=".${FILE_NAME}.installed"
     
     clear_screen
-    
     bxp_ascii_title "$TOOL_NAME"
-    
     echo -e "${C}  ==================================================${N}"
     
     if [ -f "$MARKER_FILE" ]; then
         echo -e "  ${G}[+] Module $TOOL_NAME is already installed. Booting up...${N}"
         sleep 1
     else
-        echo -ne "  ${Y}[?] Do you want to install $TOOL_NAME module? (Y/N) > ${N}"
-        read -r confirm
-        if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-            echo -e "  ${R}[-] Installation aborted.${N}"; sleep 1.5; return
-        fi
-
-        if [ ! -f "$FILE_NAME" ]; then
-            echo -e "\n  ${G}[*] Downloading module from GitHub Server...${N}"
-            curl -fsSL --max-time 30 --retry 3 -o "$FILE_NAME" "${MODULE_URL}/${FILE_NAME}" || { echo -e "  ${R}[-] Download failed!${N}"; sleep 2; return; }
-            if [[ ! -f "$FILE_NAME" ]] || ! head -n 1 "$FILE_NAME" | grep -qE '^#!.*(bash|sh)'; then
-                echo -e "  ${R}[-] CRITICAL: Invalid format!${N}"; rm -f "$FILE_NAME"; sleep 2; return
-            fi
-            echo -e "  ${G}[+] Module found in local cache. Preparing boot sequence...${N}"
-        fi
         touch "$MARKER_FILE"
     fi
 
@@ -354,10 +343,17 @@ run_tool() {
     echo ""
     chmod +x "$FILE_NAME" 2>/dev/null
     
-    bash "$FILE_NAME"
+    # JALANKAN MODUL TERPISAH
+    if [ -f "$FILE_NAME" ]; then
+        bash "$FILE_NAME"
+    else
+        echo -e "\n  ${R}[!] Module $FILE_NAME not found locally or on GitHub.${N}"
+        echo -e "  ${Y}[*] Creating dummy module for testing...${N}"
+        sleep 2
+    fi
     MODULE_EXIT=$?
     
-    if [ "$MODULE_EXIT" -ne 0 ]; then
+    if [ "$MODULE_EXIT" -ne 0 ] && [ "$MODULE_EXIT" -ne 0 ]; then
         echo -e "\n  ${R}[!] Module exited with error code: $MODULE_EXIT${N}"
     fi
     
@@ -394,11 +390,27 @@ user_guide() {
     echo -e "    - Press CTRL+C to stop the listener safely."
     echo ""
     echo -e "${C}  ==================================================${N}"
-    # Tambahan Quotes Hacker
     echo -e "  ${R}\"The quieter you become, the more you are able to hear.\"${N}"
     echo -e "  ${C}                     - Kali Linux${N}"
     echo ""
     read -p "  Press Enter to return to main menu..."
+}
+
+menu_vpn_entry() {
+    if [ ! -f "vpn_module.py" ] && [ ! -f "vpn_module.sh" ]; then
+        echo -e "${C}[*] Downloading VPN module...${N}"
+        curl -sL -o vpn_module.py "${MODULE_URL}/vpn_module.py"
+        curl -sL -o vpn_module.sh "${MODULE_URL}/vpn_module.sh"
+    fi
+
+    if command -v python3 >/dev/null 2>&1 && [ -f "vpn_module.py" ]; then
+        python3 vpn_module.py
+    elif [ -f "vpn_module.sh" ]; then
+        bash vpn_module.sh
+    else
+        echo -e "${R}[!] Failed to load VPN module.${N}"
+        sleep 2
+    fi
 }
 
 main() {

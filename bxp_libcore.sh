@@ -8,13 +8,10 @@ export C='\033[0;36m'; export B='\033[0;34m'; export W='\033[1;37m'
 export R='\033[0;31m'; export Y='\033[1;33m'; export G='\033[0;32m'; export N='\033[0m'
 
 # --- 0. PROXY INTERCEPTOR ENGINE (PATCH IJUL) ---
-# Fungsi ini ngecek apakah VPN aktif, kalo iya, paksa curl lewat proxy
 bxp_curl() {
     if [ -f "$HOME/.vpn_state" ] || [ -f "./.vpn_state" ] || pgrep -x tor >/dev/null 2>&1; then
-        # Pake flag -x biar kebal dari isu curl ignore env di Arch/BlackArch
         command curl -s -x socks5h://127.0.0.1:9050 "$@"
     else
-        # Normal
         command curl "$@"
     fi
 }
@@ -24,7 +21,6 @@ bxp_http_request() {
     local url="$1"; local payload="$2"
     local user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) BXP-Engine/2.0"
     local response_time
-    # Ganti curl jadi bxp_curl biar kena VPN
     response_time=$(bxp_curl -A "$user_agent" --max-time 5 -o /dev/null -w "%{time_total}" "${url}${payload}" 2>/dev/null)
     if [ -z "$response_time" ] || [ "$response_time" = "0.000000" ]; then
         echo "TIMEOUT/ERROR"
@@ -117,6 +113,8 @@ bxp_boot_sequence() {
             local msg1="Calibrating magnifying lens..."; local msg2="Scanning hidden frequencies..."; local msg3="Rendering network map..." ;;
         "NYCTOPHOBIA")
             local msg1="Hooking session listener..."; local msg2="Binding port 2010..."; local msg3="Awaiting dark connections..." ;;
+        "SHADOW LINEAGE")
+            local msg1="Awakening the shadows..."; local msg2="Loading native wordlist..."; local msg3="Preparing stealth queries..." ;;
         *)
             local msg1="Synchronizing protocols preparing runtime..."; local msg2="Initializing core processes..."; local msg3="Loading cryptographic engine..." ;;
     esac
@@ -263,6 +261,17 @@ ASCII
 ██║   ██║██║   ██║██║    ██║██╔══██║    ██║╚██╔╝██║██╔══██║██║   ██║██║╚██╗██║██║██╔══╝    ╚██╔╝  
 ╚██████╔╝╚██████╔╝███████╗██║██║  ██║    ██║ ╚═╝ ██║██║  ██║╚██████╔╝██║ ╚████║██║██║        ██║   
  ╚═════╝  ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═╝    ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝╚═╝        ╚═╝   
+ASCII
+            echo -e "\033[0m\n" ;;
+        "SHADOW LINEAGE")
+            # Warna Hijau Neon (RGB: 57;255;20)
+            echo -e "\033[38;2;57;255;20m"; cat <<'ASCII'
+███████╗██╗  ██╗ █████╗ ██████╗  ██████╗ ██╗    ██╗    ██╗     ██╗███╗   ██╗███████╗ █████╗  ██████╗ ███████╗
+██╔════╝██║  ██║██╔══██╗██╔══██╗██╔═══██╗██║    ██║    ██║     ██║████╗  ██║██╔════╝██╔══██╗██╔════╝ ██╔════╝
+███████╗███████║███████║██║  ██║██║   ██║██║ █╗ ██║    ██║     ██║██╔██╗ ██║█████╗  ███████║██║  ███╗█████╗  
+╚════██║██╔══██║██╔══██║██║  ██║██║   ██║██║███╗██║    ██║     ██║██║╚██╗██║██╔══╝  ██╔══██║██║   ██║██╔══╝  
+███████║██║  ██║██║  ██║██████╔╝╚██████╔╝╚███╔███╔╝    ███████╗██║██║ ╚████║███████╗██║  ██║╚██████╔╝███████╗
+╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝  ╚═════╝  ╚══╝╚══╝     ╚══════╝╚═╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝
 ASCII
             echo -e "\033[0m\n" ;;
         *)
