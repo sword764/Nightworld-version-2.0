@@ -376,7 +376,7 @@ user_guide() {
     echo -e "    - Select a category (Cyber / Exploit / Netscan / OSINT)."
     echo -e "    - Choose the desired module."
     echo -e "    - Type 'Y' when prompted to install (only required once)."
-    echo -e "    - Wait for the download and boot sequence to complete."
+    echo -e "    - Wait for the installation process to complete."
     echo ""
     echo -e "  ${Y}[2] USING THE LISTENERS${N}"
     echo -e "    - For Session Hooks (NYCTOPHOBIA), the listener port is 2010."
@@ -389,11 +389,15 @@ user_guide() {
     echo -e "    - Stay tuned for upcoming OSINT tools in the next update."
     echo ""
     echo -e "  ${Y}[4] TIPS & TRICKS${N}"
-    echo -e "    - Use a VPN/Proxy (Menu 6) to secure your connection."
+    echo -e "    - Use a VPN/Proxy to secure your connection."
     echo -e "    - Do not close the terminal while a listener is running."
     echo -e "    - Press CTRL+C to stop the listener safely."
     echo ""
     echo -e "${C}  ==================================================${N}"
+    # Tambahan Quotes Hacker
+    echo -e "  ${R}\"The quieter you become, the more you are able to hear.\"${N}"
+    echo -e "  ${C}                     - Kali Linux${N}"
+    echo ""
     read -p "  Press Enter to return to main menu..."
 }
 
