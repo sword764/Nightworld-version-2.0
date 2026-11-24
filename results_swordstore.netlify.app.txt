@@ -1,0 +1,15 @@
+www.swordstore.netlify.app
+mail.swordstore.netlify.app
+ftp.swordstore.netlify.app
+admin.swordstore.netlify.app
+api.swordstore.netlify.app
+dev.swordstore.netlify.app
+test.swordstore.netlify.app
+blog.swordstore.netlify.app
+vpn.swordstore.netlify.app
+cpanel.swordstore.netlify.app
+webmail.swordstore.netlify.app
+ns1.swordstore.netlify.app
+ns2.swordstore.netlify.app
+smtp.swordstore.netlify.app
+pop.swordstore.netlify.app
