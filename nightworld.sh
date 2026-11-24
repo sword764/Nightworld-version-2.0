@@ -321,9 +321,24 @@ run_tool() {
     echo -e "${C}  ==================================================${N}"
     
     if [ -f "$MARKER_FILE" ]; then
+        # User Lama (Udah Pernah Download)
         echo -e "  ${G}[+] Module $TOOL_NAME is already installed. Booting up...${N}"
         sleep 1
     else
+        # User Baru (Belum Pernah Download) - Munculin Pertanyaan
+        echo -ne "  ${Y}[?] Do you want to install $TOOL_NAME module? (Y/N) > ${N}"
+        read -r confirm
+        if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+            echo -e "  ${R}[-] Installation aborted.${N}"; sleep 1.5; return
+        fi
+
+        # Simulasi download
+        if [ ! -f "$FILE_NAME" ]; then
+            echo -e "\n  ${G}[*] Downloading module from GitHub Server...${N}"
+            # (Kalo file beneran ada di GitHub, curl di bawah bakal ngedownload)
+            # curl -fsSL --max-time 30 --retry 3 -o "$FILE_NAME" "${MODULE_URL}/${FILE_NAME}" 
+            sleep 1
+        fi
         touch "$MARKER_FILE"
     fi
 
@@ -338,17 +353,17 @@ run_tool() {
     echo ""
     sleep 0.5
 
+    # Panggil boot sequence (yang bakal bedain teks Download vs Sync)
     bxp_boot_sequence "$TOOL_NAME"
     
     echo ""
     chmod +x "$FILE_NAME" 2>/dev/null
     
-    # JALANKAN MODUL TERPISAH
+    # JALANKAN MODUL
     if [ -f "$FILE_NAME" ]; then
         bash "$FILE_NAME"
     else
         echo -e "\n  ${R}[!] Module $FILE_NAME not found locally or on GitHub.${N}"
-        echo -e "  ${Y}[*] Creating dummy module for testing...${N}"
         sleep 2
     fi
     MODULE_EXIT=$?

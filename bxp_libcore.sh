@@ -20,7 +20,6 @@ bxp_require() {
 
     if [ ${#missing[@]} -eq 0 ]; then return 0; fi
 
-    # Install diam-diam tanpa nampilin error
     if [ -n "$PREFIX" ] && echo "$PREFIX" | grep -qi "com.termux"; then
         pkg update -y >/dev/null 2>&1
         for pkg in "${missing[@]}"; do
@@ -100,10 +99,11 @@ bxp_boot_sequence() {
     local START_TIME=$(date +%s%3N)
     local IS_ROOT=0
     local ENV_TYPE="Unknown"
-    local IS_NEW_INSTALL=0
     
-    # Cek apakah ini instalasi baru atau udah pernah
-    if [ -f ".${TOOL_NAME,,}.sh.tmp" ] || [ ! -f ".${TOOL_NAME,,}.sh.installed" ]; then
+    # Cek Marker Install
+    local MARKER_FILE=".${TOOL_NAME,,}.sh.installed"
+    local IS_NEW_INSTALL=0
+    if [ ! -f "$MARKER_FILE" ]; then
         IS_NEW_INSTALL=1
     fi
     
