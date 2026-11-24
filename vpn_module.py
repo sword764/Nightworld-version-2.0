@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ============================================
 #   VPN / PROXY MODULE (Python) - NightWorld v2.0
-#   Patched by Ijul v2.0
+#   UI Patched by Ijul v2.0
 # ============================================
 
 import os
@@ -24,7 +24,6 @@ def clear():
     sys.stdout.flush()
 
 def save_env_to_file(proxy_url):
-    """Nyimpen proxy ke file biar bisa di-source sama nightworld.sh"""
     with open(ENV_FILE, "w") as f:
         f.write(f"export http_proxy=\"{proxy_url}\"\n")
         f.write(f"export https_proxy=\"{proxy_url}\"\n")
@@ -94,7 +93,6 @@ def start_tor():
         "ALL_PROXY": proxy_url, "HTTP_PROXY": proxy_url, "HTTPS_PROXY": proxy_url
     })
     
-    # Simpan ke file biar kebaca shell utama
     save_env_to_file(proxy_url)
     
     print(f"{G}[+] VPN Tor Aktif (Port {TOR_PORT}).{N}")
@@ -154,7 +152,6 @@ def start_proxy():
         "ALL_PROXY": chosen, "HTTP_PROXY": chosen, "HTTPS_PROXY": chosen
     })
     
-    # Simpan ke file biar kebaca shell utama
     save_env_to_file(chosen)
     
     print(f"{G}[+] Proxy Aktif: {chosen}{N}")
@@ -176,34 +173,34 @@ def stop_proxy(keep_state=False):
     print(f"{G}[+] Proxy dimatikan.{N}")
 
 def draw_layout():
-    size = shutil.get_terminal_size()
-    cols = size.columns if size.columns > 0 else 80
-    if cols > 80: cols = 80 
-    
-    border = "=" * cols
-    line_dash = "-" * cols
-
     clear()
-    print(f"{C}{border}{N}")
-    print(f"{W}{'V P N  /  P R O X Y'.center(cols)}{N}")
-    print(f"{C}{border}{N}")
-    
+    # Style disamain persis kayak menu Exploitation Tuan
+    print(f"{C}  =================================================={N}")
+    print(f"{W}    TOOLS HUB {C}|{W} VPN / Proxy{N}")
+    print(f"{C}  =================================================={N}")
+    print()
     get_status()
-    
-    print(f"{C}{line_dash}{N}")
-    print(f"  {G}[1]{N} {W}Aktifkan (Tor){N}")
-    print(f"  {G}[2]{N} {W}Aktifkan (Proxy Manual){N}")
-    print(f"  {R}[3]{N} {W}Matikan VPN{N}")
-    print(f"  {R}[4]{N} {W}Matikan Proxy{N}")
-    print(f"  {Y}[0]{N} {W}Kembali{N}")
-    print(f"{C}{line_dash}{N}")
-    print("\n" * 3)
+    print()
+    print(f"{C}  --------------------------------------------------{N}")
+    print()
+    print(f"  \033[1;32m[1]\033[0m  \033[1;37mAktifkan (Tor)\033[0m")
+    print()
+    print(f"  \033[1;32m[2]\033[0m  \033[1;37mAktifkan (Proxy Manual)\033[0m")
+    print()
+    print(f"  \033[1;31m[3]\033[0m  \033[1;37mMatikan VPN\033[0m")
+    print()
+    print(f"  \033[1;31m[4]\033[0m  \033[1;37mMatikan Proxy\033[0m")
+    print()
+    print(f"  \033[1;33m[0]\033[0m  \033[1;37mKembali\033[0m")
+    print()
+    print(f"{C}  --------------------------------------------------{N}")
+    print()
 
 def main():
     while True:
         draw_layout()
         choice = input(f"  {Y}Select menu > {N}").strip()
-        
+        print()
         if choice == "1": start_tor()
         elif choice == "2": start_proxy()
         elif choice == "3": stop_vpn()

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================
 #   VPN / PROXY MODULE (Shell) - NightWorld v2.0
-#   Patched by Ijul v2.0
+#   UI Patched by Ijul v2.0
 # ============================================
 
 C='\033[0;36m'; G='\033[0;32m'; Y='\033[1;33m'; R='\033[0;31m'; W='\033[1;37m'; N='\033[0m'
@@ -40,6 +40,7 @@ get_status() {
     pgrep -x tor >/dev/null 2>&1 && vpn="ON"
     [ -f "$STATE_FILE" ] && grep -qE "^(TOR|PROXY:)" "$STATE_FILE" && proxy="ON"
     
+    # Format status biar rapi
     echo -e "  ${C}[*] VPN Tor : ${W}$vpn${N}"
     echo -e "  ${C}[*] Proxy   : ${W}$proxy${N}"
 }
@@ -122,34 +123,42 @@ stop_proxy() {
 }
 
 draw_layout() {
-    local cols=$(tput cols 2>/dev/null || echo 80); [ "$cols" -gt 80 ] && cols=80
-    local border=$(printf "%${cols}s" | tr ' ' '='); local dash=$(printf "%${cols}s" | tr ' ' '-')
-
     clear; printf '\033[3J'
-    echo -e "${C}${border}${N}"
-    printf "${W}%*s${N}\n" $(( (cols + 13) / 2 )) "V P N  /  P R O X Y"
-    echo -e "${C}${border}${N}"
+    # Style disamain persis kayak menu Exploitation Tuan
+    echo -e "${C}  ==================================================${N}"
+    echo -e "${W}    TOOLS HUB ${C}|${W} VPN / Proxy${N}"
+    echo -e "${C}  ==================================================${N}"
+    echo ""
     get_status
-    echo -e "${C}${dash}${N}"
-    echo -e "  ${G}[1]${N} ${W}Aktifkan (Tor)${N}"
-    echo -e "  ${G}[2]${N} ${W}Aktifkan (Proxy Manual){N}"
-    echo -e "  ${R}[3]${N} ${W}Matikan VPN${N}"
-    echo -e "  ${R}[4]${N} ${W}Matikan Proxy${N}"
-    echo -e "  ${Y}[0]${N} ${W}Kembali${N}"
-    echo -e "${C}${dash}${N}"
-    echo -e "\n\n\n"
+    echo ""
+    echo -e "${C}  --------------------------------------------------${N}"
+    echo ""
+    echo -e "  \033[1;32m[1]\033[0m  \033[1;37mAktifkan (Tor)\033[0m"
+    echo ""
+    echo -e "  \033[1;32m[2]\033[0m  \033[1;37mAktifkan (Proxy Manual)\033[0m"
+    echo ""
+    echo -e "  \033[1;31m[3]\033[0m  \033[1;37mMatikan VPN\033[0m"
+    echo ""
+    echo -e "  \033[1;31m[4]\033[0m  \033[1;37mMatikan Proxy\033[0m"
+    echo ""
+    echo -e "  \033[1;33m[0]\033[0m  \033[1;37mKembali\033[0m"
+    echo ""
+    echo -e "${C}  --------------------------------------------------${N}"
+    echo ""
 }
 
 menu_vpn() {
     while true; do
         draw_layout
-        read -p "  Select menu > " choice
+        echo -ne "  ${Y}Select menu > ${N}"
+        read -r choice
+        echo ""
         case "$choice" in
             1) start_tor ;; 2) start_proxy ;;
             3) stop_vpn ;; 4) stop_proxy ;;
-            0) return ;; *) sleep 1 ;;
+            0) return ;; *) echo -e "  ${R}[!] Invalid choice.${N}"; sleep 1 ;;
         esac
-        echo ""; read -p "  Press Enter..."
+        echo ""; read -p "  Press Enter to continue..."
     done
 }
 
